@@ -1,8 +1,8 @@
-# 🛡️ Google Workspace Token Activity Analyzer
+# Google Workspace Token Activity Analyzer
 
 A robust data pipeline to **fetch**, **process**, and **analyze** token activity events from the `Google Workspace Admin Reports API`. This project ensures no data loss across multiple runs and provides insight into API usage patterns.
 
-## 📌 Overview
+## Overview
 
 This project is designed to:
 
@@ -13,7 +13,7 @@ This project is designed to:
    * Who generated the most events?
    * Which API method returned the most bytes?
 
-## ⚙️ Project Architecture
+## Project Architecture
 
 ### Pipeline Architecture
 ```bash
@@ -78,7 +78,7 @@ flowchart TD
 * Each fetch run also produces a dedicated `.jsonl(.gz)` file capturing all events retrieved during that run. This file serves as a:
     * Complete snapshot of raw API responses for the run (unfiltered, unpartitioned, and undeduplicated).
     * One file per run, named using `ISO-style UTC` timestamps (e.g., `epr_2025-05-30T15-00-00Z.jsonl.gz`). `epr` stands for `Events per run`.
-    * This file is not used in the processing pipeline, it's retained strictly for audit and debugging.
+    * This file is not used in the processing pipeline; it's retained strictly for audit and debugging.
 
 ### 2. **Processor**
 
@@ -142,7 +142,7 @@ flowchart LR
 > If you don’t have history yet, use **3–5 minutes**. After a few days, recompute the percentile and tighten/loosen as needed.
 
 
-## ✅ Assumptions & Safeguards
+## Assumptions & Safeguards
 
 * No real-time guarantees from the API. Events may arrive late or out of order.
 * A **time-based overlap** ensures reliable fetching across runs.
@@ -151,7 +151,7 @@ flowchart LR
 * Only events from the **last 48 hours (from last run)** are processed and analyzed.
 ---
 
-## 📁 Folder Structure
+## Folder Structure
 
 ```bash
 .
@@ -166,22 +166,13 @@ flowchart LR
 ├── models.py           # Pydantic models for parsing
 └── utils.py            # Common utilities (e.g., recent file resolver)
 ```
-
-Yes, you're right! You had indeed shared actual **device specs** and **runtime performance metrics**, and I suggested placing this as a **dedicated section just before the "🛠️ Project Setup"** part in your README-style document.
-
-Here's that section reconstructed exactly with:
-
-* 📌 Your originally shared values
-* 💡 Structured presentation
-* ✅ My previously suggested placement
-
 ---
 
-## 🧪 Performance Metrics & Device Specs
+## Performance Metrics & Device Specs
 
 This section documents how the pipeline performs in practice and the environment it was tested on. Helps as a baseline for future optimization or portability.
 
-### ⏱️ Pipeline Performance (Batch of \~500K records)
+### Pipeline Performance (Batch of \~500K records)
 
 | Stage                    | Time Taken  |
 | ------------------------ | ----------- |
@@ -189,7 +180,7 @@ This section documents how the pipeline performs in practice and the environment
 | Beam Transform + Parquet | \~1.5 min |
 | Ad-hoc Polars Analysis   | < 3 sec     |
 
-### 🧮 Volume Stats
+### Volume Stats
 
 | Metric                  | Value (approx) |
 | ----------------------- | -------------- |
@@ -200,9 +191,7 @@ This section documents how the pipeline performs in practice and the environment
 | Compression ratio | \~56% (12 MB -> 7 MB)|
 | Throughput | \~5,600 records/sec |
 
----
-
-### 💻 Local Device Specs
+### Local Device Specs
 
 | Component      | Detail                               |
 | -------------- | ------------------------------------ |
@@ -212,7 +201,6 @@ This section documents how the pipeline performs in practice and the environment
 | Disk           | SSD (NVMe)                           |
 | OS             | Windows 11 + WSL 2                   |
 | Python Version | 3.12.9                               |
-
 
 ---
 
@@ -262,7 +250,7 @@ GWS_USE_GZIP=True
 GWS_GZIP_COMPRESSION_LVL=6
 ```
 
-## ▶️ Run Instructions
+## Run Instructions
 - Run programs from the **ROOT** folder of the project
 
 ### Step 1: Fetch Activity Data
@@ -273,8 +261,6 @@ python fetcher.py
 
 > Pulls token activity from the last run timestamp up to now, with overlap protection.
 
----
-
 ### Step 2: Process the Raw Data
 
 ```bash
@@ -282,8 +268,6 @@ python process.py
 ```
 
 > Deduplicates and partitions data into Parquet files.
-
----
 
 ### Step 3: Run Analysis
 
@@ -309,6 +293,7 @@ User with most events:
 Top API by data returned: 
 {'method_name': 'reports.activities.list', 'total_bytes': 38805605490}
 ```
+---
 
 ## Authors
 1. [Kayvan Shah](https://github.com/KayvanShah1) | `MS in Applied Data Science` | `USC`
