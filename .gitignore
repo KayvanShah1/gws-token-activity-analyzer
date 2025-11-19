@@ -1,4 +1,5 @@
 creds.json
+.tmp_dagster_*/
 data/
 output/
 notebooks/

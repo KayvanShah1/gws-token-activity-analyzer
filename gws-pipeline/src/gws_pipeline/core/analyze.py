@@ -3,8 +3,8 @@ from pathlib import Path
 
 import polars as pl
 
-from config import get_logger, settings
-from utils import fetch_last_run_timestamp, timed_run
+from .config import get_logger, settings
+from .utils import fetch_last_run_timestamp, timed_run
 
 logger = get_logger("TokenActivityAnalyzer")
 

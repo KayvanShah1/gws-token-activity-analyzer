@@ -3,16 +3,16 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from config import get_logger, settings
-from models import ActivityPathParams, ActivityQueryParams
-from utils import format_duration, get_relative_path
+from .config import get_logger, settings
+from .models import ActivityPathParams, ActivityQueryParams
+from .utils import get_relative_path, timed_run
 
 logger = get_logger("TokenActivityFetcher")
 
@@ -59,6 +59,16 @@ def flush_buffer(buffer: List[dict], file_path: Path):
     logger.info(f"Flushed {len(buffer)} events to {get_relative_path(file_path)}")
 
 
+def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[Tuple[datetime, datetime]]:
+    chunks = []
+    current = start
+    while current < end:
+        next_chunk = min(current + timedelta(hours=chunk_hours), end)
+        chunks.append((current, next_chunk))
+        current = next_chunk
+    return chunks
+
+
 # --- Fetching token activity ---
 def create_retry_session(creds: Credentials) -> AuthorizedSession:
     session = AuthorizedSession(creds)
@@ -73,6 +83,7 @@ def create_retry_session(creds: Credentials) -> AuthorizedSession:
     return session
 
 
+@timed_run
 def fetch_token_activity_buffered():
     run_start_time = datetime.now(timezone.utc)
     creds = Credentials.from_service_account_file(
@@ -154,9 +165,6 @@ def fetch_token_activity_buffered():
     save_last_run_timestamp(settings.state_file_fetcher, now)
     logger.info(f"Flushed events to {len(partition_buffers)} partitioned files.")
     logger.info(f"Fetched {num_events_fetched} events in total.")
-
-    time_elapsed = datetime.now(timezone.utc) - run_start_time
-    logger.info(f"Run completed in {format_duration(time_elapsed)}.")
 
 
 if __name__ == "__main__":

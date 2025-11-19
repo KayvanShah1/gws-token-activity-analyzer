@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from config import settings
+from .config import settings
 
 
 def remove_dir_content(path: Path):

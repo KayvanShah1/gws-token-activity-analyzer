@@ -11,7 +11,7 @@ from rich.logging import RichHandler
 
 class AppSettings(BaseSettings):
     # Base directories
-    base_dir: Path = Path(__file__).resolve().parent
+    base_dir: Path = Path(__file__).resolve().parents[4]
 
     # File paths for data storage
     data_dir: Path = Path.joinpath(base_dir, "data")
@@ -45,7 +45,9 @@ class AppSettings(BaseSettings):
     )
 
     # Configuration for Pydantic settings
-    model_config = SettingsConfigDict(env_prefix="GWS_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="GWS_", env_file=f"{base_dir}/.env", env_file_encoding="utf-8", extra="ignore"
+    )
 
     def model_dump(self, **kwargs):
         dump = super().model_dump(**kwargs)
@@ -91,4 +93,4 @@ def get_logger(name):
 
 if __name__ == "__main__":
     logger = get_logger("GWSSettings")
-    logger.info(f"Settings loaded: {settings.model_dump()}")  # Debugging line to check settings
+    logger.info(f"Settings loaded: \n{settings.model_dump()}")  # Debugging line to check settings

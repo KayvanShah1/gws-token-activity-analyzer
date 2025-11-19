@@ -10,10 +10,9 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from apache_beam.options.pipeline_options import PipelineOptions
 
-from config import get_logger, settings
-from fetcher import format_duration
-from models import RawTokenActivity
-from utils import fetch_last_run_timestamp
+from .config import get_logger, settings
+from .models import RawTokenActivity
+from .utils import fetch_last_run_timestamp, format_duration
 
 logger = get_logger("TokenActivityProcessor")
 
