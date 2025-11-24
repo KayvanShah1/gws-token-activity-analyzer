@@ -1,7 +1,7 @@
-from datetime import timezone
 import logging
 import logging.handlers
 import os
+from datetime import timezone
 from pathlib import Path
 
 from pydantic import Field
@@ -14,12 +14,16 @@ class AppSettings(BaseSettings):
     base_dir: Path = Path(__file__).resolve().parents[4]
 
     # File paths for data storage
-    data_dir: Path = Path.joinpath(base_dir, "data")
-    state_dir: Path = Path.joinpath(base_dir, "state")
+    var_dir: Path = Path.joinpath(base_dir, "var")
+    if not var_dir.exists():
+        var_dir.mkdir(parents=True, exist_ok=True)
+
+    data_dir: Path = Path.joinpath(var_dir, "data")
+    state_dir: Path = Path.joinpath(var_dir, "state")
     raw_data_dir: Path = Path.joinpath(data_dir, "raw")
     per_run_data_dir: Path = Path.joinpath(data_dir, "runs")
     processed_data_dir: Path = Path.joinpath(data_dir, "processed")
-    log_dir: Path = Path.joinpath(base_dir, "logs")
+    log_dir: Path = Path.joinpath(var_dir, "logs")
 
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -36,6 +40,8 @@ class AppSettings(BaseSettings):
     OVERLAP_MINUTES: int = Field(3, description="Overlap buffer for safe backfill")
     USE_GZIP: bool = Field(False, description="Whether to gzip output files")
     GZIP_COMPRESSION_LVL: int = Field(5, description="Compression level for gzip files")
+    MAX_PARALLEL_WINDOWS: int = Field(4, description="Maximum number of parallel windows")
+    WINDOW_HOURS: int = Field(6, description="Hours per fetch window")
 
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
@@ -80,7 +86,7 @@ def get_logger(name):
         # File handler (Rotating)
         fh = logging.handlers.RotatingFileHandler(
             os.path.join(settings.log_dir, "gws-activity-analyzer.log"),
-            maxBytes=50 * 1024,  # 20KB log file max
+            maxBytes=128 * 1024,  # 20KB log file max
             backupCount=3,
             delay=True,
         )
