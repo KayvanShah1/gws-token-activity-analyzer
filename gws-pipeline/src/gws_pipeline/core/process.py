@@ -16,6 +16,25 @@ from .utils import fetch_last_run_timestamp, format_duration
 
 logger = get_logger("TokenActivityProcessor")
 
+PARQUET_SCHEMA = pa.schema(
+    [
+        ("timestamp", pa.timestamp("us")),
+        ("unique_id", pa.string()),
+        ("user", pa.string()),
+        ("profile_id", pa.string()),
+        ("ip", pa.string()),
+        ("event_type", pa.string()),
+        ("event_name", pa.string()),
+        ("method_name", pa.string()),
+        ("num_bytes", pa.int64()),
+        ("api_name", pa.string()),
+        ("client_id", pa.string()),
+        ("app_name", pa.string()),
+        # ("client_type", pa.string()),
+        # ("product_bucket", pa.string()),
+    ]
+)
+
 
 class ReadCompressedJSONL(beam.DoFn):
     def process(self, file_path: str):
@@ -50,7 +69,7 @@ class WritePartitionedParquet(beam.DoFn):
         table = pa.Table.from_pylist(records, schema=self.schema)
         pq.write_table(table, output_path, compression="snappy")
 
-        yield f"Wrote {len(records)} rows to {output_path.relative_to(Path.cwd())}"
+        yield f"Wrote {len(records)} rows to {output_path.relative_to(settings.base_dir)}"
 
 
 def extract_partition_key(row):
@@ -73,28 +92,14 @@ def get_recent_files(base_dir: Path, hours: int = 48):
     return matching_files
 
 
+def default_parallelism():
+    cpus = os.cpu_count() or 2
+    return max(2, int(cpus * 0.50))
+
+
 def run():
     logger.info("Processing Pipeline started")
     run_start_time = datetime.now(timezone.utc)
-
-    parquet_schema = pa.schema(
-        [
-            ("timestamp", pa.timestamp("us")),
-            ("unique_id", pa.string()),
-            ("user", pa.string()),
-            ("profile_id", pa.string()),
-            ("ip", pa.string()),
-            ("event_type", pa.string()),
-            ("event_name", pa.string()),
-            ("method_name", pa.string()),
-            ("num_bytes", pa.int64()),
-            ("api_name", pa.string()),
-            ("client_id", pa.string()),
-            ("app_name", pa.string()),
-            # ("client_type", pa.string()),
-            # ("product_bucket", pa.string()),
-        ]
-    )
 
     recent_files = get_recent_files(settings.raw_data_dir, hours=settings.DEFAULT_DELTA_HRS)
     if not recent_files:
@@ -102,7 +107,7 @@ def run():
         return
     output_base = settings.processed_data_dir
 
-    options = PipelineOptions()
+    options = PipelineOptions([], save_main_session=False)
     with beam.Pipeline(options=options) as p:
         (
             p
@@ -115,7 +120,7 @@ def run():
             | "Key by partition" >> beam.Map(extract_partition_key)
             | "Group by partition" >> beam.GroupByKey()
             | "Write partitioned Parquet"
-            >> beam.ParDo(WritePartitionedParquet(output_dir=output_base, schema=parquet_schema))
+            >> beam.ParDo(WritePartitionedParquet(output_dir=output_base, schema=PARQUET_SCHEMA))
             | "Log output" >> beam.Map(lambda msg: logger.info(msg))
         )
 
