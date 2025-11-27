@@ -4,7 +4,8 @@ from typing import List, Tuple
 
 from dagster import AssetExecutionContext, MetadataValue, asset
 from gws_pipeline.core.config import settings
-from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range
+from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, write_run_snapshot
+from gws_pipeline.core.models import RunSnapshot, WindowRange
 
 
 @asset(
@@ -38,34 +39,55 @@ def raw_token_activity_incremental(context: AssetExecutionContext) -> None:
     session = google_reports_api.get_session()
 
     earliest_window_start = windows[0][0]
-    latest_event_time_global: datetime | None = last_run
+    latest_event_time_global = earliest_event_time_global = None
     total_events = 0
 
     def process_window(window: Tuple[datetime, datetime]):
         w_start, w_end = window
         context.log.info(f"Fetching window {w_start.isoformat()} -> {w_end.isoformat()}")
-        num_events, latest_event_time = fetch_window_to_files(
+        num_events, earliest_event_time, latest_event_time = fetch_window_to_files(
             session=session,
             start=w_start,
             end=w_end,
-            run_start_time=now,
             raw_data_dir=settings.raw_data_dir,
-            per_run_dir=settings.per_run_data_dir,
         )
-        return num_events, w_start, w_end, latest_event_time
+        return num_events, w_start, w_end, earliest_event_time, latest_event_time
 
     # 2) Run windows in parallel
     results: List[Tuple[int, datetime, datetime, datetime | None]] = []
     with ThreadPoolExecutor(max_workers=settings.MAX_PARALLEL_WINDOWS) as pool:
         futures = [pool.submit(process_window, w) for w in windows]
         for fut in futures:
-            num_events, w_start, w_end, latest_event_time = fut.result()
+            num_events, w_start, w_end, earliest_event_time, latest_event_time = fut.result()
             total_events += num_events
-            results.append((num_events, w_start, w_end, latest_event_time))
 
-            if latest_event_time is not None:
-                if latest_event_time_global is None or latest_event_time > latest_event_time_global:
-                    latest_event_time_global = latest_event_time
+            earliest_event_time_global = (
+                earliest_event_time
+                if earliest_event_time_global is None
+                else min(earliest_event_time_global, earliest_event_time)
+            )
+            latest_event_time_global = (
+                latest_event_time
+                if latest_event_time_global is None
+                else max(latest_event_time_global, latest_event_time)
+            )
+            results.append((num_events, w_start, w_end, earliest_event_time, latest_event_time))
+
+    # Write per-run snapshot if enabled
+    if settings.WRITE_SNAPSHOT:
+        run_id = now.strftime("%Y%m%dT%H%M%S")
+        snapshot_path = settings.per_run_data_dir / f"snapshot_{run_id}.json"
+        snapshot = RunSnapshot(
+            start=last_run,
+            end=now,
+            run_id=run_id,
+            num_windows=len(windows),
+            num_events=total_events,
+            earliest_event_time=earliest_event_time_global,
+            latest_event_time=latest_event_time_global,
+            windows=[WindowRange(start=res[1], end=res[2]) for res in results],
+        )
+        write_run_snapshot(snapshot, snapshot_path)
 
     # 3) Update cursor only after full success of this incremental run
     if latest_event_time_global is not None:
