@@ -18,20 +18,22 @@ class AppSettings(BaseSettings):
     if not var_dir.exists():
         var_dir.mkdir(parents=True, exist_ok=True)
 
+    # Data directories
     data_dir: Path = Path.joinpath(var_dir, "data")
-    state_dir: Path = Path.joinpath(var_dir, "state")
     raw_data_dir: Path = Path.joinpath(data_dir, "raw")
-    per_run_data_dir: Path = Path.joinpath(data_dir, "runs")
+    per_run_data_dir: Path = Path.joinpath(data_dir, "runs_snapshots")
     processed_data_dir: Path = Path.joinpath(data_dir, "processed")
-    log_dir: Path = Path.joinpath(var_dir, "logs")
 
+    # Log and state directories
+    state_dir: Path = Path.joinpath(var_dir, "state")
+    log_dir: Path = Path.joinpath(var_dir, "logs")
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
 
     # State files for tracking last run timestamps
     state_file_fetcher: Path = Path.joinpath(state_dir, "last_run_fetcher.json")
 
-    # Environment-specific settings
+    # Fetcher and processing settings
     BUFFER_SIZE: int = Field(5000, description="Buffer size for batch partition flush")
     PER_RUN_BUFFER_SIZE: int = Field(2500, description="Buffer size for per-run log file")
     DEFAULT_TIMEZONE: timezone = Field(timezone.utc, description="Timezone for datetime handling")
@@ -42,6 +44,7 @@ class AppSettings(BaseSettings):
     GZIP_COMPRESSION_LVL: int = Field(5, description="Compression level for gzip files")
     MAX_PARALLEL_WINDOWS: int = Field(4, description="Maximum number of parallel windows")
     WINDOW_HOURS: int = Field(6, description="Hours per fetch window")
+    WRITE_SNAPSHOT: bool = Field(True, description="Whether to write per-run snapshots")
 
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
@@ -55,6 +58,7 @@ class AppSettings(BaseSettings):
         env_prefix="GWS_", env_file=f"{base_dir}/.env", env_file_encoding="utf-8", extra="ignore"
     )
 
+    # Override model_dump to make paths relative to base_dir for logging
     def model_dump(self, **kwargs):
         dump = super().model_dump(**kwargs)
         for k, v in dump.items():
