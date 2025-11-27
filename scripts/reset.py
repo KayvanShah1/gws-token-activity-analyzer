@@ -5,7 +5,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "gws-pipeline" / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gws-pipeline" / "src"))
 from gws_pipeline.core.config import settings
 
 console = Console()
