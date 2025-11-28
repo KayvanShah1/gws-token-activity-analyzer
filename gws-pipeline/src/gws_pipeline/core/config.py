@@ -39,7 +39,7 @@ class AppSettings(BaseSettings):
     DEFAULT_TIMEZONE: timezone = Field(timezone.utc, description="Timezone for datetime handling")
     DEFAULT_DATE_FORMAT: str = Field("%Y-%m-%dT%H:%M:%S%z", description="Format for datetime parsing")
     DEFAULT_DELTA_HRS: int = Field(48, description="Default hours back to fetch on first run")
-    OVERLAP_MINUTES: int = Field(3, description="Overlap buffer for safe backfill")
+    BACKWARD_OVERLAP_MINUTES: int = Field(3, description="Overlap buffer for safe backfill")
     USE_GZIP: bool = Field(False, description="Whether to gzip output files")
     GZIP_COMPRESSION_LVL: int = Field(5, description="Compression level for gzip files")
     MAX_PARALLEL_WINDOWS: int = Field(4, description="Maximum number of parallel windows")
