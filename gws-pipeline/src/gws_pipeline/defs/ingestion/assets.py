@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List, Tuple
 
 from dagster import AssetExecutionContext, MetadataValue, asset
-from gws_pipeline.core.config import settings
+from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, write_run_snapshot
 from gws_pipeline.core.models import RunSnapshot, WindowRange
 
@@ -38,18 +38,19 @@ def raw_token_activity_incremental(context: AssetExecutionContext) -> None:
 
     session = google_reports_api.get_session()
 
-    earliest_window_start = windows[0][0]
+    earliest_window_start = windows[0][1]
     latest_event_time_global = earliest_event_time_global = None
     total_events = 0
 
     def process_window(window: Tuple[datetime, datetime]):
-        w_start, w_end = window
+        w_idx, w_start, w_end = window
         context.log.info(f"Fetching window {w_start.isoformat()} -> {w_end.isoformat()}")
         num_events, earliest_event_time, latest_event_time = fetch_window_to_files(
             session=session,
             start=w_start,
             end=w_end,
             raw_data_dir=settings.raw_data_dir,
+            window_idx=w_idx,
         )
         return num_events, w_start, w_end, earliest_event_time, latest_event_time
 
@@ -106,9 +107,7 @@ def raw_token_activity_incremental(context: AssetExecutionContext) -> None:
             "max_parallel_windows": MetadataValue.int(settings.MAX_PARALLEL_WINDOWS),
             "total_events": MetadataValue.int(total_events),
             "earliest_window_start": MetadataValue.text(earliest_window_start.isoformat()),
-            "latest_event_time": MetadataValue.text(
-                latest_event_time_global.isoformat() if latest_event_time_global else "none"
-            ),
+            "latest_event_time": MetadataValue.text(latest_event_time_global.isoformat()),
         }
     )
 
