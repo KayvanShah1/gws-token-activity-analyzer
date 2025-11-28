@@ -1,12 +1,9 @@
 import logging
 import shutil
-import sys
 from pathlib import Path
 
+from gws_pipeline.core import settings
 from rich.console import Console
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gws-pipeline" / "src"))
-from gws_pipeline.core.config import settings
 
 console = Console()
 

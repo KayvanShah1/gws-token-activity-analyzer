@@ -8,7 +8,7 @@ from google.oauth2.service_account import Credentials
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from gws_pipeline.core.config import settings
+from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import load_last_run_timestamp, save_last_run_timestamp
 
 

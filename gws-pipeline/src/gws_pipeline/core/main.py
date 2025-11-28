@@ -1,8 +1,8 @@
-from analyze import analyze as run_analysis
-from config import get_logger
-from fetcher import fetch_token_activity_buffered
-from process import run as run_processing_pipeline
-from utils import timed_run
+from gws_pipeline.core.analyze import analyze as run_analysis
+from gws_pipeline.core import get_logger
+from gws_pipeline.core.fetcher import fetch_token_activity_buffered
+from gws_pipeline.core.process import process_recent_token_activity
+from gws_pipeline.core.utils import timed_run
 
 logger = get_logger("TokenActivityOrchestrator")
 
@@ -11,7 +11,7 @@ logger = get_logger("TokenActivityOrchestrator")
 def run_all():
     logger.info("Starting full pipeline...")
     fetch_token_activity_buffered()
-    run_processing_pipeline()
+    process_recent_token_activity()
     run_analysis()
     logger.info("Pipeline execution completed.")
 
