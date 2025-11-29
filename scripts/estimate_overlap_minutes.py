@@ -39,7 +39,6 @@ def _parse_utc(dt_str: str) -> datetime:
 
 @timed_run
 def estimate_backward_overlap(
-    run_snapshots_glob: str = str(settings.per_run_data_dir / "*.json"),
     run_window_minutes: Optional[int] = None,  # deprecated, kept for compatibility
     percentile: int = 95,
     safety_pad_minutes: float = 1.0,
