@@ -26,12 +26,9 @@ class AppSettings(BaseSettings):
 
     # Log and state directories
     state_dir: Path = Path.joinpath(var_dir, "state")
+    state_dir.mkdir(parents=True, exist_ok=True)
     log_dir: Path = Path.joinpath(var_dir, "logs")
-    if not log_dir.exists():
-        log_dir.mkdir(parents=True, exist_ok=True)
-
-    # State files for tracking last run timestamps
-    state_file_fetcher: Path = Path.joinpath(state_dir, "last_run_fetcher.json")
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     # Fetcher and processing settings
     BUFFER_SIZE: int = Field(5000, description="Buffer size for batch partition flush")
