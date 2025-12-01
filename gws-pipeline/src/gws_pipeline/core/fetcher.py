@@ -112,6 +112,18 @@ def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[T
     return windows
 
 
+def window_hours_for(application: Application) -> int:
+    """Determine the fetch window size in hours for the given application."""
+    # High-volume apps: smaller windows (often many per run)
+    if application in (Application.ADMIN):
+        return 24
+    # Low-volume apps: larger windows (often just 1–2 per run)
+    if application in (Application.LOGIN, Application.SAML, Application.DRIVE):
+        return 48
+    # Default fallback
+    return settings.WINDOW_HOURS
+
+
 # --- Fetching token activity ---
 def create_retry_session(creds: Credentials) -> AuthorizedSession:
     """Create an AuthorizedSession with retry strategy for transient errors."""

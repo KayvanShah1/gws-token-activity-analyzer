@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 
 from dagster import AssetExecutionContext, MetadataValue, asset
 from gws_pipeline.core import settings
-from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, write_run_snapshot
+from gws_pipeline.core.fetcher import fetch_window_to_files, split_time_range, window_hours_for, write_run_snapshot
 from gws_pipeline.core.models import Application, RunSnapshot, WindowRange
 
 
@@ -15,7 +15,9 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
     last_run = state_file.load_last_run(application)
     now = datetime.now(timezone.utc)
 
-    windows = split_time_range(last_run, now, chunk_hours=settings.WINDOW_HOURS)
+    # 1) Determine time windows to process
+    chunk_hours = window_hours_for(application)
+    windows = split_time_range(last_run, now, chunk_hours=chunk_hours)
     if not windows:
         context.log.info(f"[{application.value}] No new time window to process.")
         return
