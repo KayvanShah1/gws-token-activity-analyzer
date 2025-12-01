@@ -1,20 +1,39 @@
 from datetime import datetime
+from enum import Enum
 from typing import Any, ClassVar, Dict, Iterable, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
 
+class Application(str, Enum):
+    TOKEN = "TOKEN"
+    LOGIN = "login"
+    SAML = "saml"
+    ADMIN = "admin"
+
+
 # --- Pydantic model for API path and query params ---
 class ActivityPathParams(BaseModel):
-    """Path parameters for the Google Workspace Reports API token activity endpoint.
-    Defaults to all users and TOKEN application.
+    """Holds path parameters for Google Workspace Reports API.
+    Values:
+      - userKey: "all" by default
+      - applicationName: e.g. "TOKEN", "login", "saml", "admin"
     """
 
     userKey: str = "all"
-    applicationName: str = "TOKEN"
+    applicationName: Application = Application.TOKEN
 
-    def get_path(self) -> str:
-        return f"/admin/reports/v1/activity/users/{self.userKey}/applications/{self.applicationName}"
+    def get_relative_path(self) -> str:
+        return f"/admin/reports/v1/activity/users/{self.userKey}/applications/{self.applicationName.value}"
+
+    def get_full_endpoint(self, base_url: str) -> str:
+        """Returns full URL including base_url."""
+        return f"{base_url}{self.get_relative_path()}"
+
+    @classmethod
+    def for_application(cls, application: Application, user_key: str = "all") -> "ActivityPathParams":
+        """Convenience constructor for a given application and user key."""
+        return cls(userKey=user_key, applicationName=application)
 
 
 class ActivityQueryParams(BaseModel):
