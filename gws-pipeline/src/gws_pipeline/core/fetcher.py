@@ -54,19 +54,22 @@ def write_run_snapshot(snapshot: RunSnapshot, path: Path) -> None:
 
 
 # --- Partitioning ---
-def get_partition_path(event_time: datetime, window_idx: int) -> Path:
+def get_partition_path(application: Application, event_time: datetime, window_idx: int) -> Path:
     """Returns a partitioned file path for the given event time.
 
     Args:
+        application (Application): Application name for the activity
         event_time (datetime): Event timestamp
         window_idx (int): Fetch window index
 
     Returns:
-        Path: Partitioned file path like 'YYYY-MM-DD/part_HH_wX.jsonl'
+        Path: Partitioned file path like 'YYYY-MM-DD/part_HH_wX.jsonl' or 'YYYY-MM-DD/part_wX.jsonl'
     """
     date_part = event_time.strftime("%Y-%m-%d")
     hour_part = event_time.strftime("%H")
-    return Path(date_part) / f"part_{hour_part}_w{window_idx}.jsonl"
+    if application in (Application.TOKEN):
+        return Path(date_part) / f"part_{hour_part}_w{window_idx}.jsonl"
+    return Path(date_part) / f"part_w{window_idx}.jsonl"
 
 
 def flush_buffer(buffer: List[dict], file_path: Path):
@@ -196,7 +199,7 @@ def fetch_window_to_files(
             if latest_event_time is None or event_time > latest_event_time:
                 latest_event_time = event_time
 
-            partition_path = get_partition_path(event_time, window_idx)
+            partition_path = get_partition_path(application, event_time, window_idx)
             partition_buffers[partition_path].append(event)
 
             # flush partition buffer if large enough
