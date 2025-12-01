@@ -203,7 +203,9 @@ def fetch_window_to_files(
             num_events += len(buffer)
             flush_buffer(buffer, raw_data_dir / partition_path)
 
-    logger.info(f"[{application}] WINDOW [{start.isoformat()} -> {end.isoformat()}]. Fetched {num_events} events.")
+    logger.info(
+        f"[{application.value}] WINDOW [{start.isoformat()} -> {end.isoformat()}]. Fetched {num_events} events."
+    )
     return num_events, earliest_event_time, latest_event_time
 
 
