@@ -7,12 +7,10 @@ from typing import List, Optional, Tuple
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
+from gws_pipeline.core import get_logger, settings
+from gws_pipeline.core.models import ActivityPathParams, ActivityQueryParams, Application, RunSnapshot
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
-
-from gws_pipeline.core import get_logger, settings
-from gws_pipeline.core.models import ActivityPathParams, ActivityQueryParams, RunSnapshot
-from gws_pipeline.core.utils import get_relative_path, timed_run
 
 logger = get_logger("TokenActivityFetcher")
 
@@ -101,7 +99,7 @@ def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[T
     Returns a list of (window_index, window_start, window_end) tuples.
     """
     min_span = timedelta(seconds=1)
-    windows: List[Tuple[datetime, datetime]] = []
+    windows: List[Tuple[int, datetime, datetime]] = []
     current = start
     widx = 0
     while current < end:
@@ -129,98 +127,14 @@ def create_retry_session(creds: Credentials) -> AuthorizedSession:
     return session
 
 
-@timed_run
-def fetch_token_activity_buffered():
-    """Fetch token activity events from Google Workspace API with buffered writes.
-
-    This function fetches events from the last recorded run timestamp to now,
-    buffering writes to partitioned files and a per-run log file.
-    It updates the last run timestamp upon completion.
-    """
-    run_start_time = datetime.now(timezone.utc)
-    creds = Credentials.from_service_account_file(
-        str(settings.creds_file),
-        scopes=["https://www.googleapis.com/auth/admin.reports.audit.readonly"],
-        subject=settings.subject,
-    )
-    session = create_retry_session(creds)
-
-    last_run = load_last_run_timestamp(settings.state_file_fetcher)
-    now = datetime.now(timezone.utc)
-
-    logger.info(f"Fetching events from {last_run.isoformat()} to {now.isoformat()}...")
-
-    next_token = None
-    latest_event_time = last_run
-    partition_buffers = defaultdict(list)
-
-    path_params = ActivityPathParams()
-    path = path_params.get_path()
-    endpoint = f"{settings.base_url}{path}"
-    logger.info(f"Using endpoint: {endpoint}")
-
-    # Prepare per run file and buffer
-    per_run_path = settings.per_run_data_dir / f"epr_{run_start_time.strftime('%Y-%m-%dT%H-%M-%SZ')}.jsonl.gz"
-    per_run_path.parent.mkdir(parents=True, exist_ok=True)
-    per_run_buffer = []
-    num_events_fetched = 0
-
-    with gzip.open(per_run_path, "wt", encoding="utf-8", compresslevel=settings.GZIP_COMPRESSION_LVL) as prf:
-        while True:
-            query = ActivityQueryParams(startTime=last_run, endTime=now, pageToken=next_token)
-
-            response = session.get(endpoint, params=query.to_dict())
-            response.raise_for_status()
-            data = response.json()
-
-            for event in data.get("items", []):
-                event_time = datetime.fromisoformat(event["id"]["time"])
-                latest_event_time = max(latest_event_time, event_time)
-                partition_path = get_partition_path(event_time)
-                partition_buffers[partition_path].append(event)
-
-                # Add to per-run buffer
-                per_run_buffer.append(event)
-
-                # Check buffer sizes and flush if necessary
-                if len(partition_buffers[partition_path]) >= settings.BUFFER_SIZE:
-                    flush_buffer(
-                        partition_buffers[partition_path], Path.joinpath(settings.raw_data_dir, partition_path)
-                    )
-                    partition_buffers[partition_path].clear()
-
-                if len(per_run_buffer) >= settings.PER_RUN_BUFFER_SIZE:
-                    prf.write(json.dumps(per_run_buffer) + "\n")
-                    logger.info(f"Flushed {len(per_run_buffer)} events to {get_relative_path(per_run_path)}")
-                    num_events_fetched += settings.PER_RUN_BUFFER_SIZE
-                    per_run_buffer.clear()
-
-            # Check if we have a next page token
-            next_token = data.get("nextPageToken")
-            if not next_token:
-                break
-
-            save_last_run_timestamp(settings.state_file_fetcher, latest_event_time)
-
-    # Flush remaining buffers
-    for partition_path, buffer in partition_buffers.items():
-        if buffer:
-            flush_buffer(buffer, Path.joinpath(settings.raw_data_dir, partition_path))
-
-    if per_run_buffer:
-        with gzip.open(per_run_path, "at", encoding="utf-8", compresslevel=settings.GZIP_COMPRESSION_LVL) as prf:
-            for event in per_run_buffer:
-                prf.write(json.dumps(event) + "\n")
-        num_events_fetched += len(per_run_buffer)
-        per_run_buffer.clear()
-
-    save_last_run_timestamp(settings.state_file_fetcher, now)
-    logger.info(f"Flushed events to {len(partition_buffers)} partitioned files.")
-    logger.info(f"Fetched {num_events_fetched} events in total.")
+def build_endpoint(application: Application) -> str:
+    params = ActivityPathParams.for_application(application)
+    return params.get_full_endpoint(settings.base_url)
 
 
 def fetch_window_to_files(
     session: AuthorizedSession,
+    application: Application,
     start: datetime,
     end: datetime,
     raw_data_dir: Path,
@@ -234,6 +148,7 @@ def fetch_window_to_files(
 
     Args:
         session (AuthorizedSession): Authorized HTTP session
+        application (Application): Application name for the activity
         start (datetime): Start of the fetch window
         end (datetime): End of the fetch window
         raw_data_dir (Path): Base directory for raw data files
@@ -243,19 +158,17 @@ def fetch_window_to_files(
         Tuple[int, Optional[datetime], Optional[datetime]]: Number of events fetched,
         earliest event time, latest event time
     """
-    path_params = ActivityPathParams()
-    path = path_params.get_path()
-    endpoint = f"{settings.base_url}{path}"
+    endpoint = build_endpoint(application)
 
     partition_buffers: dict[Path, List[dict]] = defaultdict(list)
 
-    next_token: Optional[str] = None
+    next_page_token: Optional[str] = None
     num_events = 0
     earliest_event_time: Optional[datetime] = None
     latest_event_time: Optional[datetime] = None
 
     while True:
-        query = ActivityQueryParams(startTime=start, endTime=end, pageToken=next_token)
+        query = ActivityQueryParams(startTime=start, endTime=end, pageToken=next_page_token)
         response = session.get(endpoint, params=query.to_dict())
         response.raise_for_status()
         data = response.json()
@@ -276,12 +189,12 @@ def fetch_window_to_files(
 
             # flush partition buffer if large enough
             if len(partition_buffers[partition_path]) >= settings.BUFFER_SIZE:
-                num_events += settings.BUFFER_SIZE
+                num_events += len(partition_buffers[partition_path])
                 flush_buffer(partition_buffers[partition_path], raw_data_dir / partition_path)
                 partition_buffers[partition_path].clear()
 
-        next_token = data.get("nextPageToken")
-        if not next_token:
+        next_page_token = data.get("nextPageToken")
+        if not next_page_token:
             break
 
     # final flush for partitioned files
@@ -290,9 +203,10 @@ def fetch_window_to_files(
             num_events += len(buffer)
             flush_buffer(buffer, raw_data_dir / partition_path)
 
-    logger.info(f"WINDOW [{start.isoformat()} -> {end.isoformat()}]. Fetched {num_events} events.")
+    logger.info(f"[{application}] WINDOW [{start.isoformat()} -> {end.isoformat()}]. Fetched {num_events} events.")
     return num_events, earliest_event_time, latest_event_time
 
 
 if __name__ == "__main__":
-    fetch_token_activity_buffered()
+    # fetch_token_activity_buffered()
+    ...
