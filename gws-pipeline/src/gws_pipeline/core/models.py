@@ -55,6 +55,7 @@ class ActivityQueryParams(BaseModel):
 class WindowRange(BaseModel):
     """Metadata for a single time window processed in a run."""
 
+    idx: int = Field(..., description="Window index within the run (0-based)")
     start: datetime = Field(..., description="Window start time (API query start)")
     end: datetime = Field(..., description="Window end time (API query end)")
 
