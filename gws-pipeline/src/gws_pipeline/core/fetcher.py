@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import gzip
 import json
 from collections import defaultdict
@@ -12,7 +13,7 @@ from gws_pipeline.core.models import ActivityPathParams, ActivityQueryParams, Ap
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-logger = get_logger("TokenActivityFetcher")
+logger = get_logger("Incremental Activity Fetcher")
 
 
 # --- State handling ---
@@ -91,6 +92,13 @@ def flush_buffer(buffer: List[dict], file_path: Path):
                 f.write(json.dumps(event) + "\n")
 
 
+@dataclass
+class Window:
+    idx: int
+    start: datetime
+    end: datetime
+
+
 def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[Tuple[int, datetime, datetime]]:
     """Split [start, end] into contiguous windows of size chunk_hours.
 
@@ -102,14 +110,14 @@ def split_time_range(start: datetime, end: datetime, chunk_hours: int) -> List[T
     Returns a list of (window_index, window_start, window_end) tuples.
     """
     min_span = timedelta(seconds=1)
-    windows: List[Tuple[int, datetime, datetime]] = []
+    windows: List[Window] = []
     current = start
     widx = 0
     while current < end:
         next_chunk = min(current + timedelta(hours=chunk_hours), end)
         if (next_chunk - current) < min_span:
             break
-        windows.append((widx, current, next_chunk))
+        windows.append(Window(idx=widx, start=current, end=next_chunk))
         current = next_chunk
         widx += 1
     return windows
@@ -143,6 +151,7 @@ def create_retry_session(creds: Credentials) -> AuthorizedSession:
 
 
 def build_endpoint(application: Application) -> str:
+    """Build the full API endpoint URL for the given application."""
     params = ActivityPathParams.for_application(application)
     return params.get_full_endpoint(settings.base_url)
 
@@ -222,8 +231,3 @@ def fetch_window_to_files(
         f"[{application.value}] WINDOW [{start.isoformat()} -> {end.isoformat()}]. Fetched {num_events} events."
     )
     return num_events, earliest_event_time, latest_event_time
-
-
-if __name__ == "__main__":
-    # fetch_token_activity_buffered()
-    ...
