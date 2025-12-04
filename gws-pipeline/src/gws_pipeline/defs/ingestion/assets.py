@@ -12,7 +12,7 @@ from gws_pipeline.core.fetcher import (
     write_run_snapshot,
     Window,
 )
-from gws_pipeline.core.models import Application, RunSnapshot, WindowRange
+from gws_pipeline.core.schemas.fetcher import Application, RunSnapshot, WindowRange
 
 
 @dataclass
@@ -31,6 +31,8 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
 
     last_run = state_file.load_last_run(application)
     now = datetime.now(timezone.utc)
+    run_id = now.strftime("%Y%m%dT%H%M%S")
+    snapshot_path = None
 
     # 1) Determine time windows to process
     chunk_hours = window_hours_for(application)
@@ -98,7 +100,6 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
 
     # Write per-run snapshot if enabled
     if settings.WRITE_SNAPSHOT:
-        run_id = now.strftime("%Y%m%dT%H%M%S")
         snapshot_path = settings.per_run_data_dir / application.value.lower() / f"snapshot_{run_id}.json"
         snapshot_path.parent.mkdir(parents=True, exist_ok=True)
         snapshot = RunSnapshot(
@@ -115,7 +116,7 @@ def _run_raw_activity_incremental(context: AssetExecutionContext, application: A
 
     # 3) Update cursor only after full success of this incremental run
     if latest_event_time_global is not None:
-        state_file.save_last_run(latest_event_time_global, application)
+        state_file.save_last_run(latest_event_time_global, application, run_id=run_id, snapshot_path=snapshot_path)
         context.log.info(
             f"[{application.value}] Updated last_run to {latest_event_time_global.isoformat()} after successful"
             " incremental run."
