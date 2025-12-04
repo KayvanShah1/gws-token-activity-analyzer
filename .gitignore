@@ -184,3 +184,6 @@ cython_debug/
 
 # VS Code settings
 .vscode/
+
+# DBT profiles
+.dbt/
