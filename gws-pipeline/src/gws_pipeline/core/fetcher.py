@@ -1,51 +1,36 @@
-from dataclasses import dataclass
 import gzip
-import json
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+import json
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
 from gws_pipeline.core import get_logger, settings
-from gws_pipeline.core.models import ActivityPathParams, ActivityQueryParams, Application, RunSnapshot
+from gws_pipeline.core.schemas.fetcher import ActivityPathParams, ActivityQueryParams, Application, RunSnapshot
+from gws_pipeline.core.state import get_fetcher_cursor, update_fetcher_state
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-logger = get_logger("Incremental Activity Fetcher")
+logger = get_logger("IncrementalActivityFetcher")
 
 
 # --- State handling ---
 def load_last_run_timestamp(state_path: Path) -> datetime:
-    """Load the last run timestamp from the given state file.
-    If the file does not exist, return a fallback timestamp (now - DEFAULT_DELTA_HRS).
-    Args:
-        state_path (Path): Path to the state file
-    Returns:
-        datetime: Last run timestamp with overlap applied
-    """
-    # First run fallback to 48 hours ago
-    if not state_path.exists():
-        ts = datetime.now(timezone.utc) - timedelta(hours=settings.DEFAULT_DELTA_HRS)
-        logger.warning(f"State file not found. Using fallback timestamp: {ts.isoformat()}")
-        return ts
-
-    with open(state_path, "r") as f:
-        ts = datetime.fromisoformat(json.load(f)["last_run"]) - timedelta(minutes=settings.BACKWARD_OVERLAP_MINUTES)
-        logger.info(f"Loaded last run timestamp: {ts.isoformat()}")
+    """Load the last run timestamp (with overlap applied) using the shared state file."""
+    cursor = get_fetcher_cursor(state_path)
+    ts = cursor - timedelta(minutes=settings.BACKWARD_OVERLAP_MINUTES)
+    logger.info(f"Loaded last run timestamp (with overlap): {ts.isoformat()}")
     return ts
 
 
-def save_last_run_timestamp(state_path: Path, timestamp: datetime):
-    """Persist the last run timestamp to the given state file.
-    Args:
-        state_path (Path): Path to the state file
-        timestamp (datetime): Timestamp to save
-    """
-    state_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(state_path, "w") as f:
-        json.dump({"last_run": timestamp.isoformat()}, f)
+def save_last_run_timestamp(
+    state_path: Path, timestamp: datetime, run_id: Optional[str] = None, snapshot_path: Optional[Path] = None
+) -> None:
+    """Persist the last run timestamp to the shared state file."""
+    update_fetcher_state(state_path, timestamp, last_event_time=timestamp, run_id=run_id, snapshot_path=snapshot_path)
 
 
 def write_run_snapshot(snapshot: RunSnapshot, path: Path) -> None:
