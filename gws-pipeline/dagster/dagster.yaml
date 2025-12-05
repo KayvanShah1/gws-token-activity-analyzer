@@ -1,0 +1,21 @@
+python_logs:
+    managed_python_loggers:
+        - IncrementalActivityFetcher
+        - ActivityProcessor
+        - TimedRun
+        - StateStore
+        - TokenActivityAnalyzer
+        - GWSSettings
+    python_log_level: DEBUG
+    dagster_handler_config:
+        handlers:
+            fileHandler:
+                class: logging.handlers.RotatingFileHandler
+                level: DEBUG
+                filename: "../var/logs/gws-activity-analyzer.log"
+                maxBytes: 131072
+                backupCount: 3
+                formatter: fileFormatter
+        formatters:
+            fileFormatter:
+                format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
