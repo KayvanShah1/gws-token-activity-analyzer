@@ -35,8 +35,6 @@ MODEL_BY_APP: Dict[Application, Type[BaseActivity]] = {
     Application.SAML: RawSamlActivity,
 }
 
-BATCH_DAYS = 3  # process in 3-day batches
-
 
 # --------------------------------------------------------------------------- #
 # Low-level helpers                                                           #
@@ -240,7 +238,7 @@ def _run_batches(
     scopes_total = 0
     latest_ts: Optional[datetime] = None
 
-    for batch_start, batch_end in _iter_date_batches(start_date, end_date, batch_days=BATCH_DAYS):
+    for batch_start, batch_end in _iter_date_batches(start_date, end_date, batch_days=settings.PROCESS_BATCH_DAYS):
         files = _iter_files_for_range(app, batch_start, batch_end)
         if not files:
             logger.info(f"[{app.value}] No raw files found for {batch_start}..{batch_end}.")
@@ -325,7 +323,5 @@ def process_recent_activity(app: Application, hours: int = settings.DEFAULT_DELT
 
 
 if __name__ == "__main__":
-    # for app in Application:
-    #     process_recent_activity(app)
-
-    process_recent_activity(Application.ADMIN)
+    for app in Application:
+        process_recent_activity(app)

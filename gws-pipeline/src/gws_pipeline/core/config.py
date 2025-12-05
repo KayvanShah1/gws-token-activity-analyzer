@@ -43,6 +43,7 @@ class AppSettings(BaseSettings):
     MAX_PARALLEL_WINDOWS: int = Field(4, description="Maximum number of parallel windows")
     WINDOW_HOURS: int = Field(6, description="Hours per fetch window")
     WRITE_SNAPSHOT: bool = Field(True, description="Whether to write per-run snapshots")
+    PROCESS_BATCH_DAYS: int = Field(2, description="Days to process in each batch run")
 
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
