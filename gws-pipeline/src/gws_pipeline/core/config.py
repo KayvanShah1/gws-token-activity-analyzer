@@ -45,6 +45,10 @@ class AppSettings(BaseSettings):
     WRITE_SNAPSHOT: bool = Field(True, description="Whether to write per-run snapshots")
     PROCESS_BATCH_DAYS: int = Field(2, description="Days to process in each batch run")
 
+    # MotherDuck settings
+    MOTHERDUCK_TOKEN: str = Field(..., description="MotherDuck authentication token")
+    MOTHERDUCK_DB_NAME: str = Field(..., description="MotherDuck database name")
+
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
     subject: str = Field(..., description="Subject email for impersonation in API requests")

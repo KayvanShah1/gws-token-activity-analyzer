@@ -21,6 +21,7 @@ dependencies = [
     "apache-beam>=2.69.0",
     "dagster>=1.12.1",
     "dagster-dbt>=0.28.1",
+    "dagster-duckdb>=0.28.1",
     "dbt-core>=1.10.8",
     "dbt-duckdb>=1.10.0",
     "google-auth>=2.43.0",

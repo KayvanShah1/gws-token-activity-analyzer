@@ -539,6 +539,19 @@ wheels = [
 ]
 
 [[package]]
+name = "dagster-duckdb"
+version = "0.28.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dagster" },
+    { name = "duckdb" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/6a/dab45f61848a6fd42a8bca8dc0ab626a428891931c3ba97df80bd9ca99c5/dagster_duckdb-0.28.1.tar.gz", hash = "sha256:68388288877533f15bdeafaa19cb5c8c945be3de09429d9e74e49ecc423160d0", size = 9380, upload-time = "2025-11-07T16:43:56.589Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/18/de0002fe7d09ba48da96a14649175f04ffa4c159eacf298aa7b1b0440c15/dagster_duckdb-0.28.1-py3-none-any.whl", hash = "sha256:ce3a0721849670c6cbac46aafd8d8fcea6c471fc0a1f433aadcae17c5bdefde1", size = 10581, upload-time = "2025-11-07T16:43:55.393Z" },
+]
+
+[[package]]
 name = "dagster-graphql"
 version = "1.12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1233,6 +1246,7 @@ dependencies = [
     { name = "apache-beam" },
     { name = "dagster" },
     { name = "dagster-dbt" },
+    { name = "dagster-duckdb" },
     { name = "dbt-core", version = "1.10.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
     { name = "dbt-core", version = "1.10.15", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
     { name = "dbt-duckdb" },
@@ -1257,6 +1271,7 @@ requires-dist = [
     { name = "apache-beam", specifier = ">=2.69.0" },
     { name = "dagster", specifier = ">=1.12.1" },
     { name = "dagster-dbt", specifier = ">=0.28.1" },
+    { name = "dagster-duckdb", specifier = ">=0.28.1" },
     { name = "dbt-core", specifier = ">=1.10.8" },
     { name = "dbt-duckdb", specifier = ">=1.10.0" },
     { name = "google-auth", specifier = ">=2.43.0" },
