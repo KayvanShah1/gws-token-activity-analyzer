@@ -21,6 +21,7 @@ from gws_pipeline.core.schemas.events import (
     RawTokenActivity,
 )
 from gws_pipeline.core.schemas.fetcher import Application
+from gws_pipeline.core.schemas.state import AppState
 from gws_pipeline.core.state import load_state, update_processor_state
 from gws_pipeline.core.utils import timed_run
 
@@ -161,7 +162,7 @@ def _make_run_id() -> str:
     return datetime.now(settings.DEFAULT_TIMEZONE).strftime("%Y%m%dT%H%M%S")
 
 
-def _resolve_start_from(app: Application, state, hours: int) -> datetime:
+def _resolve_start_from(app: Application, state: AppState, hours: int) -> datetime:
     """Pick the cursor datetime we should start from."""
     tz = settings.DEFAULT_TIMEZONE
     now = datetime.now(tz)
