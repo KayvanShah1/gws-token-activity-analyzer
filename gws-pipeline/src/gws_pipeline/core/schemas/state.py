@@ -23,6 +23,14 @@ class ProcessorState(BaseModel):
     status: Optional[str] = None
 
 
+class DuckDBLoaderState(BaseModel):
+    """State captured after the DuckDB loader completes."""
+
+    last_loaded_event_time: Optional[datetime] = None
+    last_loaded_run_id: Optional[str] = None
+    status: Optional[str] = None
+
+
 class AppState(BaseModel):
     """Combined per-application state for fetcher + processor."""
 
@@ -30,5 +38,6 @@ class AppState(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     fetcher: FetcherState
     processor: ProcessorState = Field(default_factory=ProcessorState)
+    duckdb_loader: DuckDBLoaderState = Field(default_factory=DuckDBLoaderState)
 
     model_config = {"json_encoders": {datetime: lambda dt: dt.isoformat()}}

@@ -72,6 +72,10 @@ class AppSettings(BaseSettings):
                     pass
         return dump
 
+    @property
+    def duckdb_connection_string(self) -> str:
+        return f"md:{self.MOTHERDUCK_DB_NAME}?motherduck_token={self.MOTHERDUCK_TOKEN}"
+
 
 settings = AppSettings()
 
@@ -105,5 +109,9 @@ def get_logger(name):
 
 
 if __name__ == "__main__":
+    from rich.pretty import pretty_repr
+
     logger = get_logger("GWSSettings")
-    logger.info(f"Settings loaded: \n{settings.model_dump()}")  # Debugging line to check settings
+    s = pretty_repr(settings.model_dump())
+    logger.info(f"Settings loaded: \n{s}")  # Debugging line to check settings
+    logger.info(f"DuckDB connection string: {settings.duckdb_connection_string}")  # Debugging line to check settings
