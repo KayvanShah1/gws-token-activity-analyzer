@@ -148,6 +148,7 @@ def make_incremental_asset(app: Application):
         required_resource_keys={"google_reports_api", "state_file"},
         group_name="Ingestion",
         description=f"Incrementally fetches {app.value} activity and writes raw JSONL files.",
+        compute_kind="python",
     )
     def _asset(context: AssetExecutionContext):
         _run_raw_activity_incremental(context, app)
