@@ -91,6 +91,10 @@ class NetworkInfo(BaseModel):
 
 # --- Base activity (shared helpers) ---
 class BaseActivity(BaseModel):
+    # Fields to exclude from the final flattened record (app-specific overrides)
+    EXCLUDE_FIELDS: ClassVar[set[str]] = set()
+
+    # Raw fields from the Reports API
     id: Union[ActivityId, Dict[str, Any]]
     actor: Union[ActorInfo, Dict[str, Any]]
     events: List[Event] = Field(default_factory=list)
@@ -152,6 +156,25 @@ class BaseActivity(BaseModel):
             return None
         return {k: BaseActivity._param_value(v) for k, v in params.items()}
 
+    def _strip_excluded_fields(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Drop fields that are known to be always-null for this app category."""
+        if not self.EXCLUDE_FIELDS:
+            return record
+        return {k: v for k, v in record.items() if k not in self.EXCLUDE_FIELDS}
+
+    def _build_event_record(self) -> Tuple[Optional[Event], Dict[str, EventParameter], Dict[str, Any]]:
+        """Shared scaffolding for to_event_record implementations."""
+        event = self._first_event()
+        params = self._param_lookup(event)
+        record = self._base_record(event)
+        return event, params, record
+
+    @staticmethod
+    def _get_param(params: Dict[str, EventParameter], name: str, default: Any = None) -> Any:
+        """Safe parameter lookup with value coercion."""
+        param = params.get(name)
+        return BaseActivity._param_value(param) if param is not None else default
+
     def _base_record(self, event: Optional[Event]) -> Dict[str, Any]:
         app_info = self._get_field(self.actor, "application_info", "applicationInfo")
         base: Dict[str, Any] = {
@@ -187,11 +210,9 @@ class BaseActivity(BaseModel):
 
     def to_event_record(self) -> Dict[str, Any]:
         """Generic flattening for audit events; override for app-specific enrichment."""
-        event = self._first_event()
-        base = self._base_record(event)
-        params = self._param_lookup(event)
-        base["parameters"] = self._params_to_dict(params)
-        return base
+        _, params, record = self._build_event_record()
+        record["parameters"] = self._params_to_dict(params)
+        return self._strip_excluded_fields(record)
 
 
 # --- Token activity (scope-heavy) ---
@@ -203,6 +224,14 @@ class RawTokenActivity(BaseActivity):
     - to_event_record(): one flat row per event (for the main events table)
     - iter_scope_records(): one row per scope (for the scopes detail table)
     """
+
+    EXCLUDE_FIELDS: ClassVar[set[str]] = {
+        "impersonation",
+        "oauth_app_name",
+        "oauth_client_id",
+        "resource_ids",
+        "caller_type",
+    }
 
     # Map product_bucket → coarse service
     BUCKET_SERVICE_MAP: ClassVar[Dict[str, str]] = {
@@ -323,38 +352,32 @@ class RawTokenActivity(BaseActivity):
         """
         Return a single flat dict representing the event-level row.
         """
-        event = self._first_event()
-        params = self._param_lookup(event)
-        record: Dict[str, Any] = {
-            **self._base_record(event),
-            "method_name": None,
-            "num_bytes": 0,
-            "api_name": None,
-            "client_id": None,
-            "app_name": None,
-            "client_type": None,
-            # aggregate scope info
-            "scope_count": 0,
-            "product_buckets": None,  # list[str] or null
-            "has_drive_scope": False,
-            "has_gmail_scope": False,
-            "has_admin_scope": False,
-        }
+        _, params, record = self._build_event_record()
+        record.update(
+            {
+                "method_name": None,
+                "num_bytes": 0,
+                "api_name": None,
+                "client_id": None,
+                "app_name": None,
+                "client_type": None,
+                # aggregate scope info
+                "scope_count": 0,
+                "product_buckets": None,  # list[str] or null
+                "has_drive_scope": False,
+                "has_gmail_scope": False,
+                "has_admin_scope": False,
+            }
+        )
 
         # Event parameters
         if params:
-            if "method_name" in params:
-                record["method_name"] = params["method_name"].value
-            if "num_response_bytes" in params:
-                record["num_bytes"] = params["num_response_bytes"].int_value or 0
-            if "api_name" in params:
-                record["api_name"] = params["api_name"].value
-            if "client_id" in params:
-                record["client_id"] = params["client_id"].value
-            if "app_name" in params:
-                record["app_name"] = params["app_name"].value
-            if "client_type" in params:
-                record["client_type"] = params["client_type"].value
+            record["method_name"] = self._get_param(params, "method_name")
+            record["num_bytes"] = self._get_param(params, "num_response_bytes", 0) or 0
+            record["api_name"] = self._get_param(params, "api_name")
+            record["client_id"] = self._get_param(params, "client_id")
+            record["app_name"] = self._get_param(params, "app_name")
+            record["client_type"] = self._get_param(params, "client_type")
 
         # Aggregate scopes and product buckets
         scopes = list(self.iter_scope_records())
@@ -367,7 +390,7 @@ class RawTokenActivity(BaseActivity):
                 record["has_gmail_scope"] = "GMAIL" in buckets
                 record["has_admin_scope"] = "GSUITE_ADMIN" in buckets
 
-        return record
+        return self._strip_excluded_fields(record)
 
     def iter_scope_records(self) -> Iterable[Dict[str, Any]]:
         """
@@ -398,32 +421,27 @@ class RawTokenActivity(BaseActivity):
                     product_bucket = mv[0] if mv else None
 
             if scope_name:
-                family, _ = self._extract_scope_family(scope_name)
-                service = self._derive_service(scope_name, product_bucket)
-                yield {
-                    "timestamp": timestamp,
-                    "unique_id": unique_id,
-                    "scope_name": scope_name,
-                    "scope_family": family or None,
-                    "product_bucket": product_bucket,
-                    "service": service,
-                    "is_readonly": scope_name.endswith(".readonly"),
-                }
+                yield self._make_scope_record(timestamp, unique_id, scope_name, product_bucket)
 
         # Fallback: plain scope list if scope_data is missing
         if not had_scope_data:
             for scope_name in self._iter_scope_list_values(event):
-                family, _ = self._extract_scope_family(scope_name)
-                service = self._derive_service(scope_name, None)
-                yield {
-                    "timestamp": timestamp,
-                    "unique_id": unique_id,
-                    "scope_name": scope_name,
-                    "scope_family": family or None,
-                    "product_bucket": None,
-                    "service": service,
-                    "is_readonly": scope_name.endswith(".readonly"),
-                }
+                yield self._make_scope_record(timestamp, unique_id, scope_name, None)
+
+    def _make_scope_record(
+        self, timestamp: datetime, unique_id: str, scope_name: str, product_bucket: Optional[str]
+    ) -> Dict[str, Any]:
+        family, _ = self._extract_scope_family(scope_name)
+        service = self._derive_service(scope_name, product_bucket)
+        return {
+            "timestamp": timestamp,
+            "unique_id": unique_id,
+            "scope_name": scope_name,
+            "scope_family": family or None,
+            "product_bucket": product_bucket,
+            "service": service,
+            "is_readonly": scope_name.endswith(".readonly"),
+        }
 
     # --- scope helpers ---
     def _iter_scope_data_messages(self, event: Event) -> Iterable[Dict[str, Any]]:
@@ -443,38 +461,35 @@ class RawTokenActivity(BaseActivity):
 
 # --- Admin activity ---
 class RawAdminActivity(BaseActivity):
-    def to_event_record(self) -> Dict[str, Any]:
-        event = self._first_event()
-        params = self._param_lookup(event)
-        record = {**self._base_record(event)}
+    EXCLUDE_FIELDS: ClassVar[set[str]] = {"resource_ids"}
 
-        # Capture all parameters as a dict for downstream enrichment/JSON logging.
-        record["parameters"] = self._params_to_dict(params)
-        return record
+    def to_event_record(self) -> Dict[str, Any]:
+        _, params, record = self._build_event_record()
+        return self._strip_excluded_fields(record)
 
 
 # --- Login activity ---
 class RawLoginActivity(BaseActivity):
+    EXCLUDE_FIELDS: ClassVar[set[str]] = {"caller_type", "impersonation", "oauth_app_name", "oauth_client_id"}
+
     def to_event_record(self) -> Dict[str, Any]:
-        event = self._first_event()
-        params = self._param_lookup(event)
-        record = {**self._base_record(event)}
+        _, params, record = self._build_event_record()
 
         record.update(
             {
-                "login_type": self._param_value(params["login_type"]) if "login_type" in params else None,
-                "login_challenge_methods": (
-                    self._param_value(params["login_challenge_method"]) if "login_challenge_method" in params else None
-                ),
-                "is_suspicious": self._param_value(params["is_suspicious"]) if "is_suspicious" in params else None,
+                "login_type": self._get_param(params, "login_type"),
+                "login_challenge_methods": self._get_param(params, "login_challenge_method"),
+                "is_suspicious": self._get_param(params, "is_suspicious"),
             }
         )
 
-        return record
+        return self._strip_excluded_fields(record)
 
 
 # --- Drive activity ---
 class RawDriveActivity(BaseActivity):
+    EXCLUDE_FIELDS: ClassVar[set[str]] = {"caller_type"}
+
     def _label_stats(self) -> Tuple[int, List[str]]:
         if not self.resource_details:
             return 0, []
@@ -488,82 +503,104 @@ class RawDriveActivity(BaseActivity):
         return count, sorted(titles)
 
     def to_event_record(self) -> Dict[str, Any]:
-        event = self._first_event()
-        params = self._param_lookup(event)
-        record = {**self._base_record(event)}
+        event, params, record = self._build_event_record()
 
         label_count, label_titles = self._label_stats()
 
         record.update(
             {
-                "user_query": self._param_value(params["user_query"]) if "user_query" in params else None,
-                "parsed_query": self._param_value(params["parsed_query"]) if "parsed_query" in params else None,
-                "primary_event": self._param_value(params["primary_event"]) if "primary_event" in params else None,
-                "billable": self._param_value(params["billable"]) if "billable" in params else None,
-                "originating_app_id": (
-                    self._param_value(params["originating_app_id"]) if "originating_app_id" in params else None
-                ),
-                "actor_is_collaborator_account": (
-                    self._param_value(params["actor_is_collaborator_account"])
-                    if "actor_is_collaborator_account" in params
-                    else None
-                ),
+                "user_query": self._get_param(params, "user_query"),
+                "parsed_query": self._get_param(params, "parsed_query"),
+                "primary_event": self._get_param(params, "primary_event"),
+                "billable": self._get_param(params, "billable"),
+                "originating_app_id": self._get_param(params, "originating_app_id"),
+                "actor_is_collaborator_account": self._get_param(params, "actor_is_collaborator_account"),
                 "resource_id_count": len(event.resource_ids) if event and event.resource_ids else 0,
                 "applied_label_count": label_count,
                 "applied_label_titles": label_titles if label_titles else None,
             }
         )
 
-        return record
+        return self._strip_excluded_fields(record)
 
 
 # --- SAML activity ---
 class RawSamlActivity(BaseActivity):
+    EXCLUDE_FIELDS: ClassVar[set[str]] = {
+        "caller_type",
+        "impersonation",
+        "oauth_app_name",
+        "oauth_client_id",
+        "resource_ids",
+    }
+
     def to_event_record(self) -> Dict[str, Any]:
-        event = self._first_event()
-        params = self._param_lookup(event)
-        record = {**self._base_record(event)}
+        _, params, record = self._build_event_record()
 
         record.update(
             {
-                "orgunit_path": self._param_value(params["orgunit_path"]) if "orgunit_path" in params else None,
-                "initiated_by": self._param_value(params["initiated_by"]) if "initiated_by" in params else None,
-                "application_name": (
-                    self._param_value(params["application_name"]) if "application_name" in params else None
-                ),
-                "saml_status_code": (
-                    self._param_value(params["saml_status_code"]) if "saml_status_code" in params else None
-                ),
-                "saml_second_level_status_code": (
-                    self._param_value(params["saml_second_level_status_code"])
-                    if "saml_second_level_status_code" in params
-                    else None
-                ),
-                "saml_failure_type": self._param_value(params["failure_type"]) if "failure_type" in params else None,
-                "parameters": self._params_to_dict(params),
+                "orgunit_path": self._get_param(params, "orgunit_path"),
+                "initiated_by": self._get_param(params, "initiated_by"),
+                "application_name": self._get_param(params, "application_name"),
+                "saml_status_code": self._get_param(params, "saml_status_code"),
+                "saml_second_level_status_code": self._get_param(params, "saml_second_level_status_code"),
+                "saml_failure_type": self._get_param(params, "failure_type"),
             }
         )
 
-        return record
+        return self._strip_excluded_fields(record)
 
 
 if __name__ == "__main__":
-    # Small local smoke test: parse the example token response.
+    """
+    Local smoke test: flatten sample responses for any app.
+
+    Quick usage: tweak APP_NAME / SAMPLE_LIMIT / SAMPLE_FILE below and run `python events.py`.
+    """
+
     import json
+
     from rich.pretty import pprint
+
     from gws_pipeline.core import settings
+    from gws_pipeline.core.schemas.fetcher import Application
 
-    example_input = settings.base_dir / "input" / "example_response_token_2.json"
+    APP_NAME = "TOKEN"  # TOKEN, login, saml, admin, drive
+    START_AT = 0  # offset into items list (useful when scopes appear later in the sample)
+    SAMPLE_LIMIT = 10  # set to an int to cap how many items to flatten
+    SAMPLE_FILE = settings.base_dir / "input" / "example_response_token_2.json"
 
-    records = []
-    scope_records = []
-    with open(example_input, "r") as f:
-        data = json.loads(f.read())["token"]
-        for item in data.get("items", [])[:30]:
-            event = RawTokenActivity(**item)
+    app = Application(APP_NAME)
+    model_map = {
+        Application.TOKEN: RawTokenActivity,
+        Application.ADMIN: RawAdminActivity,
+        Application.LOGIN: RawLoginActivity,
+        Application.DRIVE: RawDriveActivity,
+        Application.SAML: RawSamlActivity,
+    }
+    model_cls = model_map[app]
+
+    key = app.value.lower()
+    records: List[Dict[str, Any]] = []
+    scope_records: List[Dict[str, Any]] = []
+    with SAMPLE_FILE.open("r") as f:
+        data = json.loads(f.read()).get(key, {})
+        payload = data.get(key, data)
+        items = payload.get("items", [])
+        if START_AT:
+            items = items[START_AT:]
+        if SAMPLE_LIMIT:
+            items = items[:SAMPLE_LIMIT]
+
+        for item in items:
+            event = model_cls(**item)
             records.append(event.to_event_record())
-            for scope_rec in event.iter_scope_records():
-                scope_records.append(scope_rec)
 
-    # pprint(scope_records)
+            if hasattr(event, "iter_scope_records"):
+                for scope_rec in event.iter_scope_records():
+                    scope_records.append(scope_rec)
+
     pprint(records)
+    if scope_records:
+        print("\nScopes:")
+        pprint(scope_records)
