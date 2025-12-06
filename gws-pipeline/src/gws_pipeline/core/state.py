@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from gws_pipeline.core import get_logger, settings
-from gws_pipeline.core.schemas.state import AppState, FetcherState, ProcessorState
+from gws_pipeline.core.schemas.state import AppState, DuckDBLoaderState, FetcherState, ProcessorState
 
 logger = get_logger("StateStore")
 
@@ -85,12 +85,6 @@ def update_fetcher_state(
     save_state(state_path, state)
 
 
-def get_processor_cursor(state_path: Path) -> Optional[datetime]:
-    """Return last processed event time (if any)."""
-    state = load_state(state_path)
-    return state.processor.last_processed_event_time
-
-
 def update_processor_state(
     state_path: Path,
     last_processed_event_time: datetime,
@@ -103,6 +97,22 @@ def update_processor_state(
     state.processor = ProcessorState(
         last_processed_event_time=last_processed_event_time,
         last_processed_run_id=run_id,
+        status=status,
+    )
+    save_state(state_path, state)
+
+
+def update_duckdb_loader_state(
+    state_path: Path,
+    last_loaded_event_time: datetime,
+    *,
+    run_id: Optional[str] = None,
+    status: str = "success",
+) -> None:
+    state = load_state(state_path)
+    state.duckdb_loader = DuckDBLoaderState(
+        last_loaded_event_time=last_loaded_event_time,
+        last_loaded_run_id=run_id,
         status=status,
     )
     save_state(state_path, state)
