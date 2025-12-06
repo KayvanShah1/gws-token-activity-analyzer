@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import DefaultDict, Dict, Iterable, List, Optional, Tuple, Type
 
+import polars as pl
 import pyarrow as pa
 import pyarrow.parquet as pq
 
@@ -103,6 +104,24 @@ def _flatten(
                 scopes.extend(list(activity.iter_scope_records()))
 
     return events, scopes
+
+
+def _dedup_records(records: List[dict], subset: List[str]) -> List[dict]:
+    """
+    Deduplicate records using Polars, keeping the latest by timestamp if present.
+    """
+    if not records:
+        return []
+
+    table = pa.Table.from_pylist(records)
+    df = pl.from_arrow(table)
+
+    # Sort to ensure keep="last" keeps the most recent timestamp per key
+    if "timestamp" in df.columns:
+        df = df.sort("timestamp")
+
+    deduped = df.unique(subset=subset, keep="last")
+    return deduped.to_dicts()
 
 
 def _partition_by_date(records: Iterable[dict]) -> DefaultDict[str, List[dict]]:
@@ -252,6 +271,19 @@ def _run_batches(
 
         events, scopes = _flatten(files, model_cls, collect_scopes)
 
+        # Deduplicate events by unique_id, keeping the latest timestamp
+        before_events = len(events)
+        events = _dedup_records(events, subset=["unique_id"])
+        if before_events != len(events):
+            logger.info(f"[{app.value}] Deduped events: {before_events} -> {len(events)}")
+
+        # Deduplicate scopes by (unique_id, scope_name, product_bucket)
+        if collect_scopes and scopes:
+            before_scopes = len(scopes)
+            scopes = _dedup_records(scopes, subset=["unique_id", "scope_name", "product_bucket"])
+            if before_scopes != len(scopes):
+                logger.info(f"[{app.value}] Deduped scopes: {before_scopes} -> {len(scopes)}")
+
         if not events:
             logger.warning(f"[{app.value}] No events parsed for {batch_start}..{batch_end}.")
             continue
@@ -331,3 +363,5 @@ def process_recent_activity(app: Application, hours: int = settings.DEFAULT_DELT
 if __name__ == "__main__":
     for app in Application:
         process_recent_activity(app)
+
+    # process_recent_activity(Application.SAML)
