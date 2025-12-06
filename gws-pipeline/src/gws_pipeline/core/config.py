@@ -52,6 +52,10 @@ class AppSettings(BaseSettings):
     # DuckDB Schema
     DUCKDB_LOADER_SCHEMA: str = Field("processed", description="DuckDB schema for loader tables")
 
+    # DBT project dir
+    DBT_PROJECT_DIR: Path = Path.joinpath(base_dir, "gws_audit_analyzer")
+    DBT_PROFILES_DIR: Path = Path.joinpath(base_dir, ".dbt")
+
     # Google Workspace API settings
     base_url: str = Field("https://www.googleapis.com", description="Base URL for Google Workspace API")
     subject: str = Field(..., description="Subject email for impersonation in API requests")
