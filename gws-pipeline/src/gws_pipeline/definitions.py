@@ -3,7 +3,12 @@ from gws_pipeline.defs.analytics.assets import dbt_models
 from gws_pipeline.defs.ingestion.assets import incremental_fetcher_assets, incremental_loader_assets
 from gws_pipeline.defs.ingestion.resources import GoogleReportsAPIResource, StateFileResource, duckdb_motherduck
 from gws_pipeline.defs.processing.assets import processing_assets
-from gws_pipeline.jobs import job_all, schedule_hourly
+from gws_pipeline.jobs import (
+    job_ingestion,
+    job_analytics,
+    schedule_ingestion_every_2d,
+    trigger_analytics_after_ingestion,
+)
 from gws_pipeline.defs.analytics.resources import dbt_resource
 
 defs = Definitions(
@@ -14,6 +19,7 @@ defs = Definitions(
         "duckdb_motherduck": duckdb_motherduck,
         "dbt": dbt_resource,
     },
-    jobs=[job_all],
-    schedules=[schedule_hourly],
+    jobs=[job_ingestion, job_analytics],
+    schedules=[schedule_ingestion_every_2d],
+    sensors=[trigger_analytics_after_ingestion],
 )
