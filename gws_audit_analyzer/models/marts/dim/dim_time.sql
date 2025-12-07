@@ -57,4 +57,3 @@ select
 from calendar
 
 order by date_day
-;
