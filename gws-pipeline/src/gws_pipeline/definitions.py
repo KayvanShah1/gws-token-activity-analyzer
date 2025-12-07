@@ -1,4 +1,5 @@
 from dagster import Definitions
+
 from gws_pipeline.defs.analytics.assets import dbt_models
 from gws_pipeline.defs.ingestion.assets import incremental_fetcher_assets, incremental_loader_assets
 from gws_pipeline.defs.ingestion.resources import GoogleReportsAPIResource, StateFileResource, duckdb_motherduck
@@ -9,10 +10,16 @@ from gws_pipeline.jobs import (
     schedule_ingestion_every_2d,
     trigger_analytics_after_ingestion,
 )
+
 from gws_pipeline.defs.analytics.resources import dbt_resource
 
 defs = Definitions(
-    assets=[*incremental_fetcher_assets, *processing_assets, *incremental_loader_assets, dbt_models],
+    assets=[
+        *incremental_fetcher_assets,
+        *processing_assets,
+        *incremental_loader_assets,
+        dbt_models,
+    ],
     resources={
         "google_reports_api": GoogleReportsAPIResource(),
         "state_file": StateFileResource(),
