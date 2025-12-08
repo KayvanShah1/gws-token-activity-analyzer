@@ -177,7 +177,7 @@ SAML_EVENT_SCHEMA = _schema(
     [
         "timestamp",
         "unique_id",
-        "app_name",
+        "application_name",
         "customer_id",
         "actor_email",
         "actor_profile_id",
@@ -188,7 +188,7 @@ SAML_EVENT_SCHEMA = _schema(
         "subdivision_code",
         "event_type",
         "event_name",
-        "resource_detail_count",
+        "app_name",
         "orgunit_path",
         "initiated_by",
         "saml_status_code",
