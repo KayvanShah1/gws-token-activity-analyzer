@@ -1,9 +1,5 @@
 # 🧠 Project Decision Log & Architecture Reflections
 
-This document captures the thought process, alternatives considered, and reasons for choosing specific tools and architecture for the `gws-token-activity-analyzer` project. It's not just a README—it's a **tech journal** of how we designed a production-leaning pipeline with real-world constraints in mind. ✨
-
----
-
 ## 📆 1. Overview of Pipeline Design
 
 ```text
