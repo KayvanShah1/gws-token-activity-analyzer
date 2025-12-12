@@ -50,7 +50,7 @@ class AppSettings(BaseSettings):
     MOTHERDUCK_DB_NAME: str = Field(..., description="MotherDuck database name")
 
     # DuckDB Schema
-    DUCKDB_LOADER_SCHEMA: str = Field("processed", description="DuckDB schema for loader tables")
+    DUCKDB_LOADER_SCHEMA: str = Field("cleaned", description="DuckDB schema for loader tables")
 
     # DBT project dir
     DBT_PROJECT_DIR: Path = Path.joinpath(base_dir, "gws_audit_analyzer")
