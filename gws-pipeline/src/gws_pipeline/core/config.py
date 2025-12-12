@@ -105,7 +105,7 @@ def get_logger(name):
         fh = logging.handlers.RotatingFileHandler(
             os.path.join(settings.log_dir, "gws-activity-analyzer.log"),
             maxBytes=128 * 1024,  # 20KB log file max
-            backupCount=3,
+            backupCount=5,
             delay=True,
         )
         fh.setLevel(logging.DEBUG)
