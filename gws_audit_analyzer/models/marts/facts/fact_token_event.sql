@@ -49,7 +49,7 @@ with
             a.app_name,
             a.client_type,
             a.api_name,
-            b.app_name,
+            b.accessing_app_name,
             b.customer_id,
 
             -- geo
@@ -59,8 +59,6 @@ with
             -- measures
             b.num_bytes,
             b.scope_count,
-            b.resource_detail_count,
-
             -- flags
             b.has_drive_scope,
             b.has_gmail_scope,
