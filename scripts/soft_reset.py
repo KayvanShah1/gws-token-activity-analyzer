@@ -39,7 +39,16 @@ def _clear_processed_data() -> None:
     processed_dir.mkdir(parents=True, exist_ok=True)
 
 
-def _reset_processor_and_loader_state() -> None:
+def _reset_processor_and_loader_state(reset_processor: bool = True, reset_loader: bool = True) -> None:
+    """
+    Reset state components for each app.
+
+    Use reset_processor=False when you only want to clear loader state.
+    """
+    if not (reset_processor or reset_loader):
+        console.print("[yellow]Skip state reset (no targets requested).[/yellow]")
+        return
+
     for app in Application:
         state_path = settings.state_dir / f"{app.value.lower()}.json"
         if not state_path.exists():
@@ -47,10 +56,26 @@ def _reset_processor_and_loader_state() -> None:
             continue
 
         state = load_state(state_path)
-        state.processor = ProcessorState()
-        state.duckdb_loader = DuckDBLoaderState()
-        save_state(state_path, state)
-        console.print(f"[green]Reset processor/loader state:[/green] {_rel(state_path)}")
+        changed = False
+
+        if reset_processor:
+            state.processor = ProcessorState()
+            changed = True
+        if reset_loader:
+            state.duckdb_loader = DuckDBLoaderState()
+            changed = True
+
+        if changed:
+            save_state(state_path, state)
+            status_parts = []
+            if reset_processor:
+                status_parts.append("processor")
+            if reset_loader:
+                status_parts.append("loader")
+            status = " & ".join(status_parts)
+            console.print(f"[green]Reset {status} state:[/green] {_rel(state_path)}")
+        else:
+            console.print(f"[yellow]No state reset requested:[/yellow] {_rel(state_path)}")
 
 
 def _drop_loader_schema() -> None:
