@@ -9,11 +9,7 @@ with
     ),
 
     filtered as (
-        select
-            b.timestamp,
-            b.actor_email,
-            b.actor_profile_id,
-            b.num_bytes
+        select b.timestamp, b.actor_email, b.actor_profile_id, b.num_bytes
         from {{ ref("fact_token_event") }} b
         cross join window_bounds w
         where b.timestamp >= w.window_start
