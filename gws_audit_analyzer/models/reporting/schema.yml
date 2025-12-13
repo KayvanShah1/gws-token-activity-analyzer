@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: agg_token_top_users_48h
+    description: Top token actors over the last 48 hours by event count and total bytes.
+    columns:
+      - name: actor_email
+        tests: [not_null]
+      - name: actor_profile_id
+        tests: [not_null]
+      - name: event_count
+        tests: [not_null]
+      - name: total_bytes
+        tests: [not_null]
+      - name: window_start
+        description: Lower bound of the 48-hour window (max timestamp minus 48h).
+      - name: window_end
+        description: Upper bound of the window (max timestamp in fact_token_event).
+      - name: rank_by_events
+        description: Rank ordered by event_count then total_bytes.
+
+  - name: agg_token_top_methods_48h
+    description: Top token API methods over the last 48 hours by total bytes and event count.
+    columns:
+      - name: method_name
+        tests: [not_null]
+      - name: event_count
+        tests: [not_null]
+      - name: total_bytes
+        tests: [not_null]
+      - name: window_start
+        description: Lower bound of the 48-hour window (max timestamp minus 48h).
+      - name: window_end
+        description: Upper bound of the window (max timestamp in fact_token_event).
+      - name: rank_by_bytes
+        description: Rank ordered by total_bytes then event_count.
