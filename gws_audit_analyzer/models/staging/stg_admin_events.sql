@@ -1,6 +1,6 @@
 {{ config(materialized="view") }}
 
-with src as (select * from {{ source("processed", "admin_events") }})
+with src as (select * from {{ source("cleaned", "admin_events") }})
 select
     timestamp,
     date_trunc('day', timestamp) as event_date,
