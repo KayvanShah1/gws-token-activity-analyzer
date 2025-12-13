@@ -1,36 +1,104 @@
 version: 2
 
 models:
-  - name: agg_token_top_users_48h
-    description: Top token actors over the last 48 hours by event count and total bytes.
-    columns:
-      - name: actor_email
-        tests: [not_null]
-      - name: actor_profile_id
-        tests: [not_null]
-      - name: event_count
-        tests: [not_null]
-      - name: total_bytes
-        tests: [not_null]
-      - name: window_start
-        description: Lower bound of the 48-hour window (max timestamp minus 48h).
-      - name: window_end
-        description: Upper bound of the window (max timestamp in fact_token_event).
-      - name: rank_by_events
-        description: Rank ordered by event_count then total_bytes.
+    - name: agg_token_top_users_48h
+      description: Top token actors over the last 48 hours by event count and total bytes.
+      columns:
+          - name: actor_email
+            tests: [not_null]
+          - name: actor_profile_id
+            tests: [not_null]
+          - name: event_count
+            tests: [not_null]
+          - name: total_bytes
+            tests: [not_null]
+          - name: window_start
+            description: Lower bound of the 48-hour window (max timestamp minus 48h).
+          - name: window_end
+            description: Upper bound of the window (max timestamp in fact_token_event).
+          - name: rank_by_events
+            description: Rank ordered by event_count then total_bytes.
 
-  - name: agg_token_top_methods_48h
-    description: Top token API methods over the last 48 hours by total bytes and event count.
-    columns:
-      - name: method_name
-        tests: [not_null]
-      - name: event_count
-        tests: [not_null]
-      - name: total_bytes
-        tests: [not_null]
-      - name: window_start
-        description: Lower bound of the 48-hour window (max timestamp minus 48h).
-      - name: window_end
-        description: Upper bound of the window (max timestamp in fact_token_event).
-      - name: rank_by_bytes
-        description: Rank ordered by total_bytes then event_count.
+    - name: agg_token_top_methods_48h
+      description: Top token API methods over the last 48 hours by total bytes and event count.
+      columns:
+          - name: method_name
+            tests: [not_null]
+          - name: event_count
+            tests: [not_null]
+          - name: total_bytes
+            tests: [not_null]
+          - name: window_start
+            description: Lower bound of the 48-hour window (max timestamp minus 48h).
+          - name: window_end
+            description: Upper bound of the window (max timestamp in fact_token_event).
+          - name: rank_by_bytes
+            description: Rank ordered by total_bytes then event_count.
+
+    - name: agg_event_volume_spikes
+      description: Hourly spikes above 3σ over the last 48h using 7-day stats.
+      columns:
+          - name: source
+            tests: [not_null]
+          - name: event_hour
+            tests: [not_null]
+
+    - name: agg_token_top_apps_48h
+      description: Token apps ranked by bytes/events over the last 48 hours.
+      columns:
+          - name: app_id
+            tests: [not_null]
+
+    - name: agg_high_risk_scopes_7d
+      description: High-risk scope usage summary for the last 7 days.
+      columns:
+          - name: window_start
+            tests: [not_null]
+          - name: window_end
+            tests: [not_null]
+
+    - name: agg_high_risk_scope_names_7d
+      description: High-risk scope names ranked by usage in the last 7 days.
+      columns:
+          - name: scope_name
+            tests: [not_null]
+
+    - name: agg_scope_pairs_high_risk_7d
+      description: High-risk scope pairs co-occurring in the last 7 days.
+      columns:
+          - name: event_date
+            tests: [not_null]
+
+    - name: agg_admin_action_alerts_48h
+      description: Admin action breakdown for the last 48 hours.
+      columns:
+          - name: event_date
+            tests: [not_null]
+
+    - name: agg_geo_recent_48h
+      description: Regional activity for the last 48 hours.
+      columns:
+          - name: event_date
+            tests: [not_null]
+
+    - name: agg_dq_dupes_30d
+      description: Duplicate event counts per day/source for the last 30 days.
+      columns:
+          - name: event_date
+            tests: [not_null]
+          - name: source
+            tests: [not_null]
+
+    - name: agg_dq_gaps_30d
+      description: Per-app daily gaps (zero events) for the last 30 days.
+      columns:
+          - name: app_id
+            tests: [not_null]
+          - name: event_date
+            tests: [not_null]
+
+    - name: agg_token_intensity_outliers_48h
+      description: Token apps ranked by avg bytes per event over the last 48 hours.
+      columns:
+          - name: app_id
+            tests: [not_null]
