@@ -1,3 +1,10 @@
+"""
+Full reset for all pipeline artifacts.
+
+- Deletes logs, state files, and all data directories (raw, processed, snapshots).
+- Leaves code/config untouched; re-fetching will start from default cursors.
+"""
+
 import logging
 import shutil
 from pathlib import Path

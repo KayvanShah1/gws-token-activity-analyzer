@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: stg_admin_events
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: stg_login_events
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: stg_drive_events
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: stg_saml_events
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: stg_token_events
+    columns:
+      - name: unique_id
+        tests: [not_null, unique]
+      - name: timestamp
+        tests: [not_null]
+
+  - name: stg_token_event_scopes
+    columns:
+      - name: unique_id
+        tests: [not_null]
+      - name: timestamp
+        tests: [not_null]

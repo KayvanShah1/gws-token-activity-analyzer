@@ -1,6 +1,6 @@
 {{ config(materialized="view") }}
 
-with src as (select * from {{ source("processed", "token_events") }})
+with src as (select * from {{ source("cleaned", "token_events") }})
 select
     "timestamp",
     date_trunc('day', timestamp) as event_date,
@@ -16,12 +16,11 @@ select
     subdivision_code,
     event_type,
     event_name,
-    resource_detail_count,
     method_name,
     num_bytes,
     api_name,
     client_id,
-    app_name,
+    accessing_app_name,
     client_type,
     scope_count,
     product_buckets,

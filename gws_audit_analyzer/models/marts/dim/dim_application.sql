@@ -2,7 +2,12 @@
 
 with
     union_app as (
-        select client_id as app_id, app_name, client_type, api_name, product_buckets
+        select
+            client_id as app_id,
+            accessing_app_name as app_name,
+            client_type,
+            api_name,
+            product_buckets
         from {{ ref("stg_token_events") }}
 
         union

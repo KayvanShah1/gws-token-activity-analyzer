@@ -48,12 +48,10 @@ with
             b.region_code,
             b.subdivision_code,
 
-            -- measures
-            b.resource_detail_count,
-
             -- SAML-specific attributes
             b.orgunit_path,
             b.initiated_by,
+            b.saml_sp_name,
             b.saml_status_code,
             b.saml_second_level_status_code,
             b.saml_failure_type,
