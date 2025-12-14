@@ -11,12 +11,11 @@ import shutil
 from pathlib import Path
 
 import duckdb
-from rich.console import Console
-
 from gws_pipeline.core import settings
 from gws_pipeline.core.schemas.fetcher import Application
 from gws_pipeline.core.schemas.state import DuckDBLoaderState, ProcessorState
 from gws_pipeline.core.state import load_state, save_state
+from rich.console import Console
 
 console = Console()
 

@@ -7,11 +7,11 @@ from dagster import AssetExecutionContext, AssetKey, MetadataValue, SourceAsset,
 from gws_pipeline.core import settings
 from gws_pipeline.core.db_loader import load_app
 from gws_pipeline.core.fetcher import (
+    Window,
     fetch_window_to_files,
     split_time_range,
     window_hours_for,
     write_run_snapshot,
-    Window,
 )
 from gws_pipeline.core.schemas.fetcher import Application, RunSnapshot, WindowRange
 

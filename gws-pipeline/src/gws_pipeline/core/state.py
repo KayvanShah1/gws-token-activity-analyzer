@@ -95,24 +95,16 @@ def update_processor_state(
     """Update processor portion while preserving fetcher state."""
     state = load_state(state_path)
     state.processor = ProcessorState(
-        last_processed_event_time=last_processed_event_time,
-        last_processed_run_id=run_id,
-        status=status,
+        last_processed_event_time=last_processed_event_time, last_processed_run_id=run_id, status=status
     )
     save_state(state_path, state)
 
 
 def update_duckdb_loader_state(
-    state_path: Path,
-    last_loaded_event_time: datetime,
-    *,
-    run_id: Optional[str] = None,
-    status: str = "success",
+    state_path: Path, last_loaded_event_time: datetime, *, run_id: Optional[str] = None, status: str = "success"
 ) -> None:
     state = load_state(state_path)
     state.duckdb_loader = DuckDBLoaderState(
-        last_loaded_event_time=last_loaded_event_time,
-        last_loaded_run_id=run_id,
-        status=status,
+        last_loaded_event_time=last_loaded_event_time, last_loaded_run_id=run_id, status=status
     )
     save_state(state_path, state)

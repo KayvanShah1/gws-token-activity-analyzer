@@ -36,6 +36,5 @@ schedule_ingestion_every_2d = ScheduleDefinition(job=job_ingestion, cron_schedul
 )
 def trigger_dbt_build_models_after_ingestion(context: RunStatusSensorContext):
     return RunRequest(
-        run_key=f"analytics_after_{context.dagster_run.run_id}",
-        tags={"source_run_id": context.dagster_run.run_id},
+        run_key=f"analytics_after_{context.dagster_run.run_id}", tags={"source_run_id": context.dagster_run.run_id}
     )

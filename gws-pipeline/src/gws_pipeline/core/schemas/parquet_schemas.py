@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pyarrow as pa
+
 from gws_pipeline.core.schemas.fetcher import Application
 
 # Reusable field definitions (all columns are nullable to match API variability)

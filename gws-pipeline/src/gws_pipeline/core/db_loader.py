@@ -196,13 +196,7 @@ def load_app(con: duckdb.DuckDBPyConnection, app: Application) -> Optional[datet
     # Events
     events_glob = (settings.processed_data_dir / app.value.lower() / "events" / "events_*.parquet").as_posix()
     events_table = f"{settings.DUCKDB_LOADER_SCHEMA}.{app.value.lower()}_events"
-    max_event_ts = _load_table(
-        con,
-        events_table,
-        events_glob,
-        start_from,
-        unique_index="unique_id",
-    )
+    max_event_ts = _load_table(con, events_table, events_glob, start_from, unique_index="unique_id")
 
     # Token scopes (only for TOKEN application)
     max_scope_ts = None
@@ -212,11 +206,7 @@ def load_app(con: duckdb.DuckDBPyConnection, app: Application) -> Optional[datet
         ).as_posix()
         scopes_table = f"{settings.DUCKDB_LOADER_SCHEMA}.{app.value.lower()}_event_scopes"
         max_scope_ts = _load_table(
-            con,
-            scopes_table,
-            scopes_glob,
-            start_from,
-            unique_index="unique_id, scope_name, product_bucket",
+            con, scopes_table, scopes_glob, start_from, unique_index="unique_id, scope_name, product_bucket"
         )
 
     # Determine latest timestamp across all loaded slices
@@ -229,9 +219,7 @@ def load_app(con: duckdb.DuckDBPyConnection, app: Application) -> Optional[datet
     # Update loader state if we loaded anything
     if latest_ts:
         update_duckdb_loader_state(
-            state_path,
-            latest_ts,
-            run_id=datetime.now(settings.DEFAULT_TIMEZONE).strftime("%Y%m%dT%H%M%S"),
+            state_path, latest_ts, run_id=datetime.now(settings.DEFAULT_TIMEZONE).strftime("%Y%m%dT%H%M%S")
         )
 
     return latest_ts

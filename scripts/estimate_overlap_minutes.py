@@ -13,13 +13,12 @@ from pathlib import Path
 from typing import Dict, Optional
 from zoneinfo import ZoneInfo
 
-from pydantic import BaseModel, ValidationError
-from rich.console import Console
-from rich.table import Table
-
 from gws_pipeline.core import get_logger, settings
 from gws_pipeline.core.schemas.fetcher import Application
 from gws_pipeline.core.utils import timed_run
+from pydantic import BaseModel, ValidationError
+from rich.console import Console
+from rich.table import Table
 
 logger = get_logger("EstimateOverlap")
 console = Console()

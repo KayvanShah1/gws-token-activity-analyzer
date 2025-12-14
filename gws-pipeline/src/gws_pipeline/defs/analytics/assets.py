@@ -1,8 +1,9 @@
 import json
 from typing import Any, Mapping, Sequence
 
-import dagster as dg
 from dagster_dbt import DagsterDbtTranslator, DbtCliResource, dbt_assets
+
+import dagster as dg
 from gws_pipeline.defs.analytics.resources import dbt_project
 
 

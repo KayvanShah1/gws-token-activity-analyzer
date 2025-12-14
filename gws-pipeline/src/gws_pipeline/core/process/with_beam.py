@@ -12,6 +12,7 @@ import apache_beam as beam
 import pyarrow as pa
 import pyarrow.parquet as pq
 from apache_beam.options.pipeline_options import PipelineOptions
+
 from gws_pipeline.core.config import get_logger, settings
 from gws_pipeline.core.schemas.events import (
     BaseActivity,
