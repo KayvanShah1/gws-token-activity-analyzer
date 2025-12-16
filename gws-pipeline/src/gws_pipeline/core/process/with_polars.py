@@ -12,7 +12,6 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from gws_pipeline.core.config import get_logger, settings
-from gws_pipeline.core.schemas.parquet_schemas import EVENT_SCHEMA_BY_APP, SCOPE_SCHEMA_BY_APP
 from gws_pipeline.core.schemas.events import (
     BaseActivity,
     RawAdminActivity,
@@ -22,6 +21,7 @@ from gws_pipeline.core.schemas.events import (
     RawTokenActivity,
 )
 from gws_pipeline.core.schemas.fetcher import Application
+from gws_pipeline.core.schemas.parquet_schemas import EVENT_SCHEMA_BY_APP, SCOPE_SCHEMA_BY_APP
 from gws_pipeline.core.schemas.state import AppState
 from gws_pipeline.core.state import load_state, update_processor_state
 from gws_pipeline.core.utils import timed_run

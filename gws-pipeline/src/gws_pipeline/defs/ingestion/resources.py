@@ -2,15 +2,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-from dagster import ConfigurableResource
 from dagster_duckdb import DuckDBResource
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
+
+from dagster import ConfigurableResource
 from gws_pipeline.core import settings
 from gws_pipeline.core.fetcher import load_last_run_timestamp, save_last_run_timestamp
 from gws_pipeline.core.schemas.fetcher import Application
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 
 class GoogleReportsAPIResource(ConfigurableResource):
@@ -22,9 +23,7 @@ class GoogleReportsAPIResource(ConfigurableResource):
 
     def get_session(self) -> AuthorizedSession:
         creds = Credentials.from_service_account_file(
-            self.service_account_file,
-            scopes=self.scopes,
-            subject=self.subject,
+            self.service_account_file, scopes=self.scopes, subject=self.subject
         )
         session = AuthorizedSession(creds)
         retry_strategy = Retry(

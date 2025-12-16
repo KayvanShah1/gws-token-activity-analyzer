@@ -1,6 +1,6 @@
 import gzip
-from collections import defaultdict
 import json
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -8,11 +8,12 @@ from typing import List, Optional, Tuple
 
 from google.auth.transport.requests import AuthorizedSession
 from google.oauth2.service_account import Credentials
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
+
 from gws_pipeline.core import get_logger, settings
 from gws_pipeline.core.schemas.fetcher import ActivityPathParams, ActivityQueryParams, Application, RunSnapshot
 from gws_pipeline.core.state import get_fetcher_cursor, update_fetcher_state
-from requests.adapters import HTTPAdapter
-from urllib3 import Retry
 
 logger = get_logger("IncrementalActivityFetcher")
 

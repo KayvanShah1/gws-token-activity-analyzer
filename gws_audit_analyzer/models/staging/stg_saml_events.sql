@@ -1,6 +1,6 @@
 {{ config(materialized="view") }}
 
-with src as (select * from {{ source("processed", "saml_events") }})
+with src as (select * from {{ source("cleaned", "saml_events") }})
 select
     timestamp,
     date_trunc('day', timestamp) as event_date,
@@ -17,7 +17,7 @@ select
     subdivision_code,
     event_type,
     event_name,
-    resource_detail_count,
+    saml_sp_name,
     orgunit_path,
     initiated_by,
     saml_status_code,

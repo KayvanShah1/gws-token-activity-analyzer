@@ -3,15 +3,15 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from dagster import AssetExecutionContext, AssetKey, MetadataValue, asset
+from dagster import AssetExecutionContext, AssetKey, MetadataValue, SourceAsset, asset
 from gws_pipeline.core import settings
 from gws_pipeline.core.db_loader import load_app
 from gws_pipeline.core.fetcher import (
+    Window,
     fetch_window_to_files,
     split_time_range,
     window_hours_for,
     write_run_snapshot,
-    Window,
 )
 from gws_pipeline.core.schemas.fetcher import Application, RunSnapshot, WindowRange
 
@@ -164,11 +164,19 @@ def make_incremental_fetcher_asset(app: Application):
         group_name="raw_fetch",
         description=f"Incrementally fetches {app.value} activity and writes raw JSONL files.",
         kinds=["python"],
+        deps=[AssetKey("google_reports_api_source")],
     )
     def _asset(context: AssetExecutionContext):
         _run_fetch_raw_activity_incremental(context, app)
 
     return _asset
+
+
+fetcher_source_asset = SourceAsset(
+    key=AssetKey("google_reports_api_source"),
+    group_name="api",
+    description="External Google Admin Reports API used to fetch audit activity.",
+)
 
 
 # --------------------------------------------------------------------------

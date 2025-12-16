@@ -6,7 +6,6 @@ from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 from rich.logging import RichHandler
 
 
@@ -50,7 +49,7 @@ class AppSettings(BaseSettings):
     MOTHERDUCK_DB_NAME: str = Field(..., description="MotherDuck database name")
 
     # DuckDB Schema
-    DUCKDB_LOADER_SCHEMA: str = Field("processed", description="DuckDB schema for loader tables")
+    DUCKDB_LOADER_SCHEMA: str = Field("cleaned", description="DuckDB schema for loader tables")
 
     # DBT project dir
     DBT_PROJECT_DIR: Path = Path.joinpath(base_dir, "gws_audit_analyzer")
@@ -105,7 +104,7 @@ def get_logger(name):
         fh = logging.handlers.RotatingFileHandler(
             os.path.join(settings.log_dir, "gws-activity-analyzer.log"),
             maxBytes=128 * 1024,  # 20KB log file max
-            backupCount=3,
+            backupCount=5,
             delay=True,
         )
         fh.setLevel(logging.DEBUG)

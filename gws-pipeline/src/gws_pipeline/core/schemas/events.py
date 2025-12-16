@@ -125,9 +125,15 @@ class BaseActivity(BaseModel):
     def _parse_timestamp(self) -> datetime:
         """Parse the activity timestamp into a datetime object."""
         ts_raw = self._get_field(self.id, "time")
+        if not ts_raw:
+            raise ValueError(f"Missing activity timestamp in id payload: {self.id}")
+
         # Example: "2025-11-27T03:11:11.616Z"
         # Normalize "Z" to "+00:00" for fromisoformat.
-        return datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+        try:
+            return datetime.fromisoformat(ts_raw.replace("Z", "+00:00"))
+        except Exception as exc:
+            raise ValueError(f"Invalid activity timestamp '{ts_raw}' in id payload: {self.id}") from exc
 
     def _first_event(self) -> Optional[Event]:
         """Return the first event in the activity, or None if no events."""
@@ -220,9 +226,10 @@ class BaseActivity(BaseModel):
         return self._strip_excluded_fields(record)
 
 
-# application_name   → log type (e.g., "token")
-# oauth_app_name     → OAuth client of actor (optional)
-# app_name           → app accessing data (Token) or SAML SP (SAML)
+# application_name   log type (e.g., "token")
+# oauth_app_name     OAuth client of actor (optional)
+# accessing_app_name app accessing data (Token)
+# saml_sp_name       SAML service provider (SAML)
 
 
 # --- Token activity (scope-heavy) ---
@@ -241,6 +248,7 @@ class RawTokenActivity(BaseActivity):
         "oauth_client_id",
         "resource_ids",
         "caller_type",
+        "resource_detail_count",
     }
 
     # Map product_bucket → coarse service
@@ -369,7 +377,7 @@ class RawTokenActivity(BaseActivity):
                 "num_bytes": 0,
                 "api_name": None,
                 "client_id": None,
-                "app_name": None,
+                "accessing_app_name": None,
                 "client_type": None,
                 # aggregate scope info
                 "scope_count": 0,
@@ -386,7 +394,7 @@ class RawTokenActivity(BaseActivity):
             record["num_bytes"] = self._get_param(params, "num_response_bytes", 0) or 0
             record["api_name"] = self._get_param(params, "api_name")
             record["client_id"] = self._get_param(params, "client_id")
-            record["app_name"] = self._get_param(params, "app_name")
+            record["accessing_app_name"] = self._get_param(params, "app_name")
             record["client_type"] = self._get_param(params, "client_type")
 
         # Aggregate scopes and product buckets
@@ -399,6 +407,15 @@ class RawTokenActivity(BaseActivity):
                 record["has_drive_scope"] = "DRIVE" in buckets
                 record["has_gmail_scope"] = "GMAIL" in buckets
                 record["has_admin_scope"] = "GSUITE_ADMIN" in buckets
+        else:
+            # Fallback: if no scope records exist, still use product_bucket to set coarse flags
+            product_bucket = self._get_param(params, "product_bucket")
+            if product_bucket:
+                pb = str(product_bucket).upper()
+                record["product_buckets"] = [pb]
+                record["has_drive_scope"] = pb == "DRIVE"
+                record["has_gmail_scope"] = pb == "GMAIL"
+                record["has_admin_scope"] = pb == "GSUITE_ADMIN"
 
         return self._strip_excluded_fields(record)
 
@@ -552,7 +569,7 @@ class RawSamlActivity(BaseActivity):
             {
                 "orgunit_path": self._get_param(params, "orgunit_path"),
                 "initiated_by": self._get_param(params, "initiated_by"),
-                "app_name": self._get_param(params, "application_name"),
+                "saml_sp_name": self._get_param(params, "application_name"),
                 "saml_status_code": self._get_param(params, "saml_status_code"),
                 "saml_second_level_status_code": self._get_param(params, "saml_second_level_status_code"),
                 "saml_failure_type": self._get_param(params, "failure_type"),

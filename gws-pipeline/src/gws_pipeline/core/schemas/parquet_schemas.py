@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pyarrow as pa
+
 from gws_pipeline.core.schemas.fetcher import Application
 
 # Reusable field definitions (all columns are nullable to match API variability)
@@ -30,7 +31,7 @@ _FIELDS = {
     "num_bytes": pa.field("num_bytes", pa.int64()),
     "api_name": pa.field("api_name", pa.string()),
     "client_id": pa.field("client_id", pa.string()),
-    "app_name": pa.field("app_name", pa.string()),
+    "accessing_app_name": pa.field("accessing_app_name", pa.string()),
     "client_type": pa.field("client_type", pa.string()),
     "scope_count": pa.field("scope_count", pa.int64()),
     "product_buckets": pa.field("product_buckets", pa.list_(pa.string())),
@@ -54,6 +55,7 @@ _FIELDS = {
     # SAML-specific
     "orgunit_path": pa.field("orgunit_path", pa.string()),
     "initiated_by": pa.field("initiated_by", pa.string()),
+    "saml_sp_name": pa.field("saml_sp_name", pa.string()),
     "saml_status_code": pa.field("saml_status_code", pa.string()),
     "saml_second_level_status_code": pa.field("saml_second_level_status_code", pa.string()),
     "saml_failure_type": pa.field("saml_failure_type", pa.string()),
@@ -80,12 +82,11 @@ TOKEN_EVENT_SCHEMA = _schema(
         "subdivision_code",
         "event_type",
         "event_name",
-        "resource_detail_count",
         "method_name",
         "num_bytes",
         "api_name",
         "client_id",
-        "app_name",
+        "accessing_app_name",
         "client_type",
         "scope_count",
         "product_buckets",
@@ -177,7 +178,7 @@ SAML_EVENT_SCHEMA = _schema(
     [
         "timestamp",
         "unique_id",
-        "app_name",
+        "application_name",
         "customer_id",
         "actor_email",
         "actor_profile_id",
@@ -188,7 +189,7 @@ SAML_EVENT_SCHEMA = _schema(
         "subdivision_code",
         "event_type",
         "event_name",
-        "resource_detail_count",
+        "saml_sp_name",
         "orgunit_path",
         "initiated_by",
         "saml_status_code",
