@@ -1,0 +1,16 @@
+.git
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.venv/
+**/node_modules/
+.env
+creds.json
+var/
+logs/
+gws_audit_analyzer/target/
+gws_audit_analyzer/logs/
