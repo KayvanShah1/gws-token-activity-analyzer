@@ -252,6 +252,6 @@ uv run python scripts/reset.py
 This repository is licensed under the **MIT License**. See the `LICENSE` file for details.
 
 <sub>
-Disclaimer: The content and code provided in this repository are for educational and demonstrative purposes only. The project may contain experimental features, and the code might not be optimized for production environments. The authors and contributors are not liable for any misuse, damages, or risks associated with the use of this code. Users are advised to review, test, and modify the code to suit their specific use cases and requirements. By using any part of this project, you agree to these terms.
+Disclaimer: This project is a personal engineering exploration and is not affiliated with or derived from any company, proprietary system, or confidential materials. 
+The content and code provided in this repository are for educational and demonstrative purposes only. The project may contain experimental features, and the code might not be optimized for production environments. The authors and contributors are not liable for any misuse, damages, or risks associated with the use of this code. Users are advised to review, test, and modify the code to suit their specific use cases and requirements. By using any part of this project, you agree to these terms.
 </sub>
-```
